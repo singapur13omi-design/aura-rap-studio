@@ -1,0 +1,162 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  name          String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  projects      Project[]
+  voiceProfiles VoiceProfile[]
+}
+
+model Project {
+  id              String           @id @default(uuid())
+  title           String           @default("Untitled Rap Project")
+  language        String           @default("sk")
+  genre           String           @default("TRAP")
+  bpm             Int              @default(140)
+  keyScale        String           @default("C Minor")
+  projectType     String           @default("RECORD_VOICE") // RECORD_VOICE, UPLOAD_RAP, FROM_EXISTING, START_BEAT
+  status          String           @default("IN_PROGRESS") // IN_PROGRESS, COMPLETED, ARCHIVED
+  duration        Float            @default(0)
+  masterVolume    Float            @default(1.0)
+  metronomeOn     Boolean          @default(false)
+  userId          String?
+  user            User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  tracks          AudioTrack[]
+  versions        ProjectVersion[]
+  analyses        AIAnalysis[]
+  exportJobs      ExportJob[]
+  processingJobs  ProcessingJob[]
+}
+
+model AudioTrack {
+  id           String        @id @default(uuid())
+  projectId    String
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name         String
+  layerType    String        @default("MAIN_VOCAL") // MAIN_VOCAL, DOUBLE_VOCAL, AD_LIBS, BACKING, CHORUS, HARMONIES, INTRO, OUTRO, BEAT, INSTRUMENTAL
+  color        String        @default("#00E5FF")
+  volume       Float         @default(0.8)
+  pan          Float         @default(0.0) // -1.0 to 1.0
+  muted        Boolean       @default(false)
+  soloed       Boolean       @default(false)
+  startTime    Float         @default(0.0) // timeline offset in seconds
+  duration     Float         @default(0.0)
+  orderIndex   Int           @default(0)
+  assetUrl     String?       // reference to audio file
+  waveformData String?       // JSON array of peaks for waveform preview
+  effects      String?       // JSON of FX chain: { eq: {...}, comp: {...}, reverb: {...}, delay: {...}, autotune: {...} }
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Beat {
+  id           String   @id @default(uuid())
+  title        String
+  genre        String   // TRAP, DRILL, DARK_TRAP, BOOM_BAP, MELODIC_RAP, etc.
+  bpm          Int
+  keyScale     String
+  audioUrl     String
+  previewUrl   String?
+  duration     Float
+  source       String   @default("BUILT_IN") // BUILT_IN, AI_GENERATED, IMPORTED
+  license      String   @default("Royalty Free - Aura Rap Studio")
+  tags         String?  // comma-separated tags
+  createdAt    DateTime @default(now())
+}
+
+model BeatGenerationJob {
+  id          String   @id @default(uuid())
+  prompt      String
+  genre       String
+  bpm         Int
+  keyScale    String?
+  status      String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  progress    Int      @default(0)
+  audioUrl    String?
+  error       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AIAnalysis {
+  id                   String   @id @default(uuid())
+  projectId            String
+  project              Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  estimatedBpm         Int
+  flowStyle            String   // Aggressive, Laid-back, Melodic, Fast Cadence, Triplet
+  energy               String   // High, Medium, Low
+  vocalCharacter       String   // Deep, Bright, Gritty, Smooth
+  keyScale             String?
+  detectedKey          String?
+  chorusLocations      String?  // JSON array of timestamp intervals
+  adlibLocations       String?  // JSON array of timestamp intervals
+  styleRecommendation  String?
+  beatRecommendation   String?
+  rawAnalysisJson      String?
+  createdAt            DateTime @default(now())
+}
+
+model VoiceProfile {
+  id                 String   @id @default(uuid())
+  userId             String?
+  user               User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name               String
+  character          String   // e.g. "Gritty Street", "Melodic Autotuned", "Crisp Boom-Bap"
+  preferredGenre     String   @default("TRAP")
+  preferredFxChain   String?  // JSON
+  referenceAudioUrl  String?
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model ProjectVersion {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versionName String
+  snapshot    String   // Full JSON snapshot of project state
+  createdAt   DateTime @default(now())
+}
+
+model ProcessingJob {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type        String   // AI_MIX, AI_MASTER, AUTOTUNE, VOCAL_CLEAN, STEM_SEPARATE
+  status      String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  progress    Int      @default(0)
+  stepName    String?  // e.g. "ANALYZING TRACK", "CLEANING VOCALS", "PROCESSING LAYERS"
+  parameters  String?  // JSON
+  result      String?  // JSON
+  error       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ExportJob {
+  id            String   @id @default(uuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  format        String   // WAV, MP3
+  bitDepth      Int      @default(24) // 16, 24, 32
+  sampleRate    Int      @default(44100) // 44100, 48000
+  includeStems  Boolean  @default(false)
+  status        String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  downloadUrl   String?
+  fileSizeBytes Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
