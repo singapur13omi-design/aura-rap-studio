@@ -45,6 +45,8 @@ interface StudioHeaderProps {
   onSaveProject: () => void;
   onOpenPricing?: () => void;
   onOpenAuth?: () => void;
+  onOpenTutorial?: () => void;
+  vipDaysRemaining?: number;
 }
 
 export const StudioHeader: React.FC<StudioHeaderProps> = ({
@@ -69,6 +71,8 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
   onSaveProject,
   onOpenPricing,
   onOpenAuth,
+  onOpenTutorial,
+  vipDaysRemaining,
 }) => {
   const { data: session } = useSession();
   const { language, setLanguage, t } = useI18n();
@@ -222,6 +226,28 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
             <span className="text-[11px]">EN</span>
           </button>
         </div>
+
+        {/* Studio Masterclass Tutorial Button */}
+        {onOpenTutorial && (
+          <button
+            onClick={onOpenTutorial}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-surface-300 hover:bg-surface-100 border border-primary/40 text-primary text-xs font-bold transition shadow-sm hover:border-primary"
+            title={language === 'sk' ? 'Ako nahrať profi track (Video návod)' : 'How to record a pro track (Masterclass)'}
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span className="hidden md:inline">{language === 'sk' ? 'Návod' : 'Tutorial'}</span>
+          </button>
+        )}
+
+        {/* VIP Days Remaining Pill */}
+        {vipDaysRemaining !== undefined && vipDaysRemaining > 0 && (
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-400/10 border border-amber-400/30 text-amber-300 text-xs font-bold">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+            <span>
+              {language === 'sk' ? `VIP: ${vipDaysRemaining} dní zdarma` : `VIP: ${vipDaysRemaining}d Free`}
+            </span>
+          </div>
+        )}
 
         {/* Upgrade / Pricing Button */}
         {plan !== 'STUDIO_PRO' && (

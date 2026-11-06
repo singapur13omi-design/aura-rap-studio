@@ -19,6 +19,9 @@ import { AiMusicAssistant } from '@/components/studio/AiMusicAssistant';
 import { DashboardView } from '@/components/studio/DashboardView';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { PricingModal } from '@/components/pricing/PricingModal';
+import { VipGatekeeper } from '@/components/vip/VipGatekeeper';
+import { StudioMasterclassModal } from '@/components/tutorial/StudioMasterclassModal';
+import { checkVipAccess, activateVipToken } from '@/lib/vipAccess';
 
 import { MultitrackAudioEngine } from '@/lib/audio/engine';
 import { generateHipHopBeat } from '@/lib/audio/synthesizer';
@@ -45,6 +48,12 @@ function AuraRapStudioContent() {
   const [masterPeakDb, setMasterPeakDb] = useState<number>(-60);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
+  // VIP Private Beta & 14-Day Access
+  const [vipChecked, setVipChecked] = useState<boolean>(false);
+  const [isVipUnlocked, setIsVipUnlocked] = useState<boolean>(false);
+  const [vipDaysRemaining, setVipDaysRemaining] = useState<number>(14);
+  const [tutorialModalOpen, setTutorialModalOpen] = useState<boolean>(false);
+
   // Auth & Subscription
   const { data: session } = useSession();
   const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
@@ -54,6 +63,24 @@ function AuraRapStudioContent() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
+      const urlVipCode = urlParams.get('vip') || urlParams.get('invite');
+      if (urlVipCode) {
+        activateVipToken(urlVipCode);
+      }
+
+      const status = checkVipAccess();
+      setIsVipUnlocked(status.isUnlocked);
+      setVipDaysRemaining(status.daysRemaining);
+      setVipChecked(true);
+
+      if (status.isUnlocked) {
+        const seenTutorial = localStorage.getItem('aura_rap_studio_seen_tutorial');
+        if (!seenTutorial) {
+          setTutorialModalOpen(true);
+          localStorage.setItem('aura_rap_studio_seen_tutorial', 'true');
+        }
+      }
+
       if (urlParams.get('upgraded') === 'true') {
         setUpgradeSuccessToast(true);
         window.history.replaceState({}, '', window.location.pathname);
@@ -513,6 +540,20 @@ function AuraRapStudioContent() {
     }
   };
 
+  // VIP Gatekeeper Screen: Restrict access if no valid VIP invite
+  if (vipChecked && !isVipUnlocked) {
+    return (
+      <VipGatekeeper
+        onUnlock={() => {
+          const status = checkVipAccess();
+          setIsVipUnlocked(true);
+          setVipDaysRemaining(status.daysRemaining);
+          setTutorialModalOpen(true);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-background text-foreground font-sans">
       <StudioHeader
@@ -550,6 +591,8 @@ function AuraRapStudioContent() {
         onSaveProject={handleSaveProject}
         onOpenPricing={() => setPricingModalOpen(true)}
         onOpenAuth={() => setAuthModalOpen(true)}
+        onOpenTutorial={() => setTutorialModalOpen(true)}
+        vipDaysRemaining={vipDaysRemaining}
       />
 
       {upgradeSuccessToast && (
@@ -720,6 +763,17 @@ function AuraRapStudioContent() {
         isOpen={pricingModalOpen}
         onClose={() => setPricingModalOpen(false)}
         onOpenAuth={() => setAuthModalOpen(true)}
+      />
+
+      {/* Interactive Studio Masterclass & Walkthrough */}
+      <StudioMasterclassModal
+        isOpen={tutorialModalOpen}
+        onClose={() => setTutorialModalOpen(false)}
+        onStartRecording={() => {
+          setTutorialModalOpen(false);
+          const mainVocal = currentProject?.tracks.find((trk) => trk.layerType === 'MAIN_VOCAL');
+          handleOpenRecordTrack(mainVocal?.id || currentProject?.tracks[0]?.id || '');
+        }}
       />
     </div>
   );

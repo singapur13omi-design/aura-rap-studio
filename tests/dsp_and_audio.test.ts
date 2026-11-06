@@ -9,6 +9,7 @@ import {
 import { calculateAIMix } from '../src/lib/ai/mixingAssistant';
 import { calculateLoudnessStats } from '../src/lib/audio/metering';
 import { AudioTrackItem } from '../src/types';
+import { VALID_VIP_TOKENS } from '../src/lib/vipAccess';
 
 describe('Audio DSP and Saturation Tests', () => {
   it('should generate valid soft-saturation transfer curve', () => {
@@ -124,5 +125,18 @@ describe('AI Mixing Engine Tests', () => {
     expect(beatRec).toBeDefined();
     // Beat should have frequency carve-out for vocal clarity
     expect(beatRec?.newFxChain.eq.mid).toBeLessThan(0);
+  });
+});
+
+describe('VIP Beta Access Validation Tests', () => {
+  it('should recognize all 3 beta invite tokens and master admin pass', () => {
+    expect(VALID_VIP_TOKENS['AURA-VIP-FLOW-01']).toBeDefined();
+    expect(VALID_VIP_TOKENS['AURA-VIP-BEAT-02']).toBeDefined();
+    expect(VALID_VIP_TOKENS['AURA-VIP-PRO-03']).toBeDefined();
+    expect(VALID_VIP_TOKENS['AURA-MASTER-CREATOR-2026']).toBeDefined();
+
+    expect(VALID_VIP_TOKENS['AURA-VIP-FLOW-01'].durationDays).toBe(14);
+    expect(VALID_VIP_TOKENS['AURA-VIP-BEAT-02'].durationDays).toBe(14);
+    expect(VALID_VIP_TOKENS['AURA-VIP-PRO-03'].durationDays).toBe(14);
   });
 });
