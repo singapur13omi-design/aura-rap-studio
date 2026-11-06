@@ -6,16 +6,14 @@ import {
   Zap,
   Activity,
   Flame,
-  Music,
   CheckCircle2,
-  Sliders,
-  Play,
   RotateCcw,
   ArrowRight,
 } from 'lucide-react';
 import { AudioTrackItem, AIAnalysisResult, HipHopGenre } from '@/types';
 import { analyzeVocalTrack } from '@/lib/ai/rapAnalyzer';
 import { generateHipHopBeat } from '@/lib/audio/synthesizer';
+import { useI18n } from '@/lib/i18n';
 
 interface AiProducerSectionProps {
   tracks: AudioTrackItem[];
@@ -47,6 +45,7 @@ export const AiProducerSection: React.FC<AiProducerSectionProps> = ({
   onAddBeatTrack,
   onSyncVocalWithBeat,
 }) => {
+  const { t, language } = useI18n();
   const [selectedVocalTrackId, setSelectedVocalTrackId] = useState<string>(
     tracks.find((t) => t.layerType === 'MAIN_VOCAL')?.id || tracks[0]?.id || ''
   );
@@ -59,24 +58,24 @@ export const AiProducerSection: React.FC<AiProducerSectionProps> = ({
   const [beatBpm, setBeatBpm] = useState<number>(currentBpm || 140);
   const [beatKey, setBeatKey] = useState<string>(currentKey || 'C Minor');
   const [promptDescription, setPromptDescription] = useState<string>(
-    'Dark aggressive trap beat, heavy 808 bass, deep piano, hard drums, 140 BPM'
+    language === 'sk'
+      ? 'Temný agresívny trap beat, tvrdý 808 sub bas, hlboké piano, rýchle hi-haty'
+      : 'Dark aggressive trap beat, heavy 808 bass, deep piano, hard drums, 140 BPM'
   );
   const [bassIntensity, setBassIntensity] = useState<number>(0.85);
   const [drumIntensity, setDrumIntensity] = useState<number>(0.9);
   const [isGeneratingBeat, setIsGeneratingBeat] = useState<boolean>(false);
   const [generatedBeatBuffer, setGeneratedBeatBuffer] = useState<AudioBuffer | null>(null);
 
-  // Execute Rap Flow Analysis
   const handleAnalyzeRap = async () => {
     const track = tracks.find((t) => t.id === selectedVocalTrackId);
     if (!track || !track.audioBuffer) {
-      alert('Vyber stopu, ktorá obsahuje nahraný alebo importovaný vokál.');
+      alert(language === 'sk' ? 'Vyber stopu, ktorá obsahuje nahraný hlas.' : 'Select a track containing recorded audio.');
       return;
     }
 
     setIsAnalyzing(true);
     try {
-      // Real DSP audio analysis
       const analysis = analyzeVocalTrack(track.audioBuffer);
       setAnalysisResult(analysis);
       setBeatBpm(analysis.estimatedBpm);
@@ -89,7 +88,6 @@ export const AiProducerSection: React.FC<AiProducerSectionProps> = ({
     }
   };
 
-  // Generate Procedural Beat
   const handleGenerateBeat = async () => {
     setIsGeneratingBeat(true);
     try {
@@ -100,7 +98,7 @@ export const AiProducerSection: React.FC<AiProducerSectionProps> = ({
         genre: selectedGenre,
         bpm: beatBpm,
         keyScale: beatKey,
-        durationSeconds: 32, // 32 seconds full loop
+        durationSeconds: 32,
         bassIntensity,
         drumIntensity,
       });
@@ -113,7 +111,6 @@ export const AiProducerSection: React.FC<AiProducerSectionProps> = ({
     }
   };
 
-  // Load generated beat into project timeline
   const handleInsertBeatToTimeline = () => {
     if (generatedBeatBuffer) {
       onAddBeatTrack(
@@ -133,24 +130,23 @@ export const AiProducerSection: React.FC<AiProducerSectionProps> = ({
             <div className="flex items-center gap-2">
               <Zap className="w-5 h-5 text-aura-blue" />
               <h2 className="text-xl font-bold text-white tracking-wide">
-                AI Rap Flow Analyzer
+                {t.rapFlowAnalyzer}
               </h2>
             </div>
             <p className="text-xs text-gray-400 mt-1">
-              Analyzes your real vocal recording to detect BPM, cadence, flow pocket, and energy.
+              {t.rapFlowDesc}
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Select Track to Analyze */}
             <select
               value={selectedVocalTrackId}
               onChange={(e) => setSelectedVocalTrackId(e.target.value)}
               className="bg-surface-100 border border-surface-50/40 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-aura-blue"
             >
-              {tracks.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.layerType})
+              {tracks.map((tItem) => (
+                <option key={tItem.id} value={tItem.id}>
+                  {tItem.name} ({tItem.layerType})
                 </option>
               ))}
             </select>
@@ -165,17 +161,16 @@ export const AiProducerSection: React.FC<AiProducerSectionProps> = ({
               ) : (
                 <Activity className="w-4 h-4" />
               )}
-              {isAnalyzing ? 'ANALYZING RAP...' : 'ANALYZE MY RAP'}
+              {isAnalyzing ? t.analyzingRap : t.analyzeMyRapBtn}
             </button>
           </div>
         </div>
 
-        {/* Real Analysis Report Output */}
         {analysisResult && (
           <div className="bg-surface-100/60 border border-surface-50/30 rounded-xl p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-surface-50/20 pb-3">
               <span className="font-bold text-xs uppercase tracking-wider text-aura-blue flex items-center gap-1.5 font-mono">
-                <CheckCircle2 className="w-4 h-4 text-aura-green" /> Rap Analysis Report
+                <CheckCircle2 className="w-4 h-4 text-aura-green" /> {t.analysisReport}
               </span>
               <span className="text-xs font-mono text-gray-400">
                 Confidence: 98% (Real DSP Analysis)
@@ -185,7 +180,7 @@ export const AiProducerSection: React.FC<AiProducerSectionProps> = ({
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-surface-200/80 p-3 rounded-lg border border-surface-50/20">
                 <span className="text-[10px] font-mono text-gray-400 block uppercase">
-                  Estimated BPM
+                  {t.estimatedBpm}
                 </span>
                 <span className="text-xl font-bold font-mono text-white">
                   {analysisResult.estimatedBpm}
@@ -194,7 +189,7 @@ export const AiProducerSection: React.FC<AiProducerSectionProps> = ({
 
               <div className="bg-surface-200/80 p-3 rounded-lg border border-surface-50/20">
                 <span className="text-[10px] font-mono text-gray-400 block uppercase">
-                  Flow Style
+                  {t.flowStyle}
                 </span>
                 <span className="text-sm font-bold text-aura-purple">
                   {analysisResult.flowStyle}
@@ -203,7 +198,7 @@ export const AiProducerSection: React.FC<AiProducerSectionProps> = ({
 
               <div className="bg-surface-200/80 p-3 rounded-lg border border-surface-50/20">
                 <span className="text-[10px] font-mono text-gray-400 block uppercase">
-                  Vocal Character
+                  {t.vocalCharacter}
                 </span>
                 <span className="text-sm font-bold text-aura-gold">
                   {analysisResult.vocalCharacter}
@@ -212,7 +207,7 @@ export const AiProducerSection: React.FC<AiProducerSectionProps> = ({
 
               <div className="bg-surface-200/80 p-3 rounded-lg border border-surface-50/20">
                 <span className="text-[10px] font-mono text-gray-400 block uppercase">
-                  Energy Rating
+                  {t.energyRating}
                 </span>
                 <span className="text-sm font-bold text-aura-red">
                   {analysisResult.energy}
@@ -222,13 +217,13 @@ export const AiProducerSection: React.FC<AiProducerSectionProps> = ({
 
             <div className="bg-black/30 p-3 rounded-lg text-xs space-y-1">
               <div className="text-gray-300">
-                <span className="text-gray-400 font-mono">AI Producer Recommendation: </span>
+                <span className="text-gray-400 font-mono">{t.aiRecommendation} </span>
                 <strong className="text-white">{analysisResult.styleRecommendation}</strong> –{' '}
                 {analysisResult.beatRecommendation}
               </div>
               {analysisResult.adlibLocations.length > 0 && (
                 <div className="text-[11px] text-gray-400 pt-1">
-                  💡 Ad-lib opportunity detected around bars: {analysisResult.adlibLocations.map((a) => `${a.start}s`).join(', ')}
+                  {t.adlibDetected} {analysisResult.adlibLocations.map((a) => `${a.start}s`).join(', ')}
                 </div>
               )}
             </div>
@@ -243,26 +238,25 @@ export const AiProducerSection: React.FC<AiProducerSectionProps> = ({
             <div className="flex items-center gap-2">
               <Flame className="w-5 h-5 text-aura-red" />
               <h2 className="text-xl font-bold text-white tracking-wide">
-                AI Hip-Hop Beat Generator
+                {t.aiBeatGeneratorTitle}
               </h2>
             </div>
             <p className="text-xs text-gray-400 mt-1">
-              Creates multi-stem Hip-hop & Trap beats tailored to your tempo, key, and lyrical vibe.
+              {t.aiBeatDesc}
             </p>
           </div>
 
-          {/* Sync Button */}
           <button
             onClick={onSyncVocalWithBeat}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-surface-100 hover:bg-surface-50 text-xs font-semibold text-aura-blue border border-aura-blue/30 transition-colors"
           >
-            <RotateCcw className="w-3.5 h-3.5" /> SYNC VOCAL WITH BEAT
+            <RotateCcw className="w-3.5 h-3.5" /> {t.syncVocalBeatBtn}
           </button>
         </div>
 
-        {/* Genre Selector Pills */}
+        {/* Genre Selector */}
         <div className="space-y-2">
-          <label className="text-xs font-mono text-gray-400 uppercase">Select Style</label>
+          <label className="text-xs font-mono text-gray-400 uppercase">{t.selectStyle}</label>
           <div className="flex flex-wrap gap-2">
             {HIP_HOP_GENRES.map((genre) => (
               <button
@@ -280,25 +274,24 @@ export const AiProducerSection: React.FC<AiProducerSectionProps> = ({
           </div>
         </div>
 
-        {/* Prompt Description */}
+        {/* Prompt */}
         <div className="space-y-1.5">
           <label className="text-xs font-mono text-gray-400 uppercase">
-            Beat Description Prompt
+            {t.beatPromptLabel}
           </label>
           <input
             type="text"
             value={promptDescription}
             onChange={(e) => setPromptDescription(e.target.value)}
-            placeholder="e.g. Dark aggressive trap beat, heavy 808 bass, deep piano, 140 BPM"
             className="w-full px-4 py-2.5 bg-surface-100 border border-surface-50/40 rounded-xl text-xs text-white focus:outline-none focus:border-aura-blue"
           />
         </div>
 
-        {/* Sliders: BPM, Bass Intensity, Drum Intensity */}
+        {/* Sliders */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-surface-100 p-4 rounded-xl border border-surface-50/30 text-xs">
           <div className="space-y-1">
             <div className="flex justify-between font-mono text-[10px] text-gray-400">
-              <span>TEMPO</span>
+              <span>{t.tempoLabel}</span>
               <span className="text-white font-bold">{beatBpm} BPM</span>
             </div>
             <input
@@ -313,7 +306,7 @@ export const AiProducerSection: React.FC<AiProducerSectionProps> = ({
 
           <div className="space-y-1">
             <div className="flex justify-between font-mono text-[10px] text-gray-400">
-              <span>808 BASS INTENSITY</span>
+              <span>{t.bass808Intensity}</span>
               <span className="text-aura-purple font-bold">
                 {Math.round(bassIntensity * 100)}%
               </span>
@@ -331,7 +324,7 @@ export const AiProducerSection: React.FC<AiProducerSectionProps> = ({
 
           <div className="space-y-1">
             <div className="flex justify-between font-mono text-[10px] text-gray-400">
-              <span>DRUM & HI-HAT DRIVE</span>
+              <span>{t.drumDrive}</span>
               <span className="text-aura-red font-bold">
                 {Math.round(drumIntensity * 100)}%
               </span>
@@ -348,7 +341,6 @@ export const AiProducerSection: React.FC<AiProducerSectionProps> = ({
           </div>
         </div>
 
-        {/* Generate Button & Result */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
           <button
             onClick={handleGenerateBeat}
@@ -360,7 +352,7 @@ export const AiProducerSection: React.FC<AiProducerSectionProps> = ({
             ) : (
               <Sparkles className="w-4 h-4" />
             )}
-            {isGeneratingBeat ? 'SYNTHESIZING BEAT...' : 'GENERATE HIP-HOP BEAT'}
+            {isGeneratingBeat ? t.synthesizingBeat : t.generateBeatBtn}
           </button>
 
           {generatedBeatBuffer && (
@@ -368,7 +360,7 @@ export const AiProducerSection: React.FC<AiProducerSectionProps> = ({
               onClick={handleInsertBeatToTimeline}
               className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-aura-blue hover:bg-aura-blue/90 text-black font-bold text-xs shadow-glow transition-all"
             >
-              <ArrowRight className="w-4 h-4" /> INSERT BEAT INTO TIMELINE
+              <ArrowRight className="w-4 h-4" /> {t.insertBeatTimeline}
             </button>
           )}
         </div>

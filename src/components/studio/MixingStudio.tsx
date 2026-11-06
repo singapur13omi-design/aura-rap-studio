@@ -4,16 +4,11 @@ import React, { useState } from 'react';
 import {
   Sliders,
   Sparkles,
-  Volume2,
-  RotateCcw,
-  Check,
-  Radio,
-  SlidersHorizontal,
-  Flame,
   CheckCircle2,
 } from 'lucide-react';
 import { AudioTrackItem, TrackFXChain } from '@/types';
 import { calculateAIMix, AIMixResult } from '@/lib/ai/mixingAssistant';
+import { useI18n } from '@/lib/i18n';
 
 interface MixingStudioProps {
   tracks: AudioTrackItem[];
@@ -83,8 +78,8 @@ export const MixingStudio: React.FC<MixingStudioProps> = ({
   tracks,
   onUpdateTrackFX,
   onUpdateTrackVolumePan,
-  onPlay,
 }) => {
+  const { t } = useI18n();
   const [selectedTrackId, setSelectedTrackId] = useState<string>(tracks[0]?.id || '');
   const [aiMixResult, setAiMixResult] = useState<AIMixResult | null>(null);
   const [isMixing, setIsMixing] = useState<boolean>(false);
@@ -93,14 +88,12 @@ export const MixingStudio: React.FC<MixingStudioProps> = ({
 
   const currentTrack = tracks.find((t) => t.id === selectedTrackId) || tracks[0];
 
-  // Execute AI Mix My Track
   const handleRunAIMix = () => {
     setIsMixing(true);
 
-    // Save snapshot for before/after comparison
     const snap = new Map();
-    for (const t of tracks) {
-      snap.set(t.id, { volume: t.volume, pan: t.pan, fx: JSON.parse(JSON.stringify(t.effects)) });
+    for (const tItem of tracks) {
+      snap.set(tItem.id, { volume: tItem.volume, pan: tItem.pan, fx: JSON.parse(JSON.stringify(tItem.effects)) });
     }
     setOriginalSnapshots(snap);
 
@@ -108,7 +101,6 @@ export const MixingStudio: React.FC<MixingStudioProps> = ({
       const result = calculateAIMix(tracks);
       setAiMixResult(result);
 
-      // Apply proposed values
       for (const rec of result.recommendations) {
         onUpdateTrackVolumePan(rec.trackId, rec.newVolume, rec.newPan);
         onUpdateTrackFX(rec.trackId, rec.newFxChain);
@@ -118,17 +110,14 @@ export const MixingStudio: React.FC<MixingStudioProps> = ({
     }, 600);
   };
 
-  // Toggle A/B compare
   const toggleABCompare = () => {
     if (!isABComparing) {
-      // Revert to original snapshot
       for (const [id, snap] of Array.from(originalSnapshots.entries())) {
         onUpdateTrackVolumePan(id, snap.volume, snap.pan);
         onUpdateTrackFX(id, snap.fx);
       }
       setIsABComparing(true);
     } else {
-      // Re-apply AI mix
       if (aiMixResult) {
         for (const rec of aiMixResult.recommendations) {
           onUpdateTrackVolumePan(rec.trackId, rec.newVolume, rec.newPan);
@@ -153,17 +142,16 @@ export const MixingStudio: React.FC<MixingStudioProps> = ({
 
   return (
     <div className="flex-1 bg-surface-300 p-6 overflow-y-auto space-y-6">
-      {/* Top Banner: AI MIX MY TRACK */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface-200 border border-surface-50/30 p-5 rounded-2xl shadow-xl">
         <div>
           <div className="flex items-center gap-2">
             <Sliders className="w-5 h-5 text-aura-blue" />
             <h2 className="text-xl font-bold text-white tracking-wide">
-              AI Mixing Studio & DSP Rack
+              {t.mixingStudioTitle}
             </h2>
           </div>
           <p className="text-xs text-gray-400 mt-1">
-            Intelligent frequency unmasking, vocal glue compression, stereo widening, and tape saturation.
+            {t.mixingStudioDesc}
           </p>
         </div>
 
@@ -177,7 +165,7 @@ export const MixingStudio: React.FC<MixingStudioProps> = ({
                   : 'bg-surface-100 text-aura-blue border-aura-blue/30'
               }`}
             >
-              {isABComparing ? 'LISTENING: BEFORE (ORIGINAL)' : 'A/B COMPARE (AFTER AI MIX)'}
+              {isABComparing ? t.abListeningBefore : t.abCompareAfter}
             </button>
           )}
 
@@ -191,12 +179,11 @@ export const MixingStudio: React.FC<MixingStudioProps> = ({
             ) : (
               <Sparkles className="w-4 h-4" />
             )}
-            {isMixing ? 'MIXING ALL TRACKS...' : 'AI MIX MY TRACK'}
+            {isMixing ? t.mixingAllTracks : t.aiMixBtn}
           </button>
         </div>
       </div>
 
-      {/* AI Mix Report Card */}
       {aiMixResult && (
         <div className="bg-surface-200/90 border border-surface-50/30 rounded-2xl p-4 space-y-3">
           <div className="flex items-center justify-between text-xs">
@@ -205,11 +192,11 @@ export const MixingStudio: React.FC<MixingStudioProps> = ({
             </span>
             <div className="flex items-center gap-4 text-gray-400 font-mono text-[11px]">
               <span>
-                Vocal Clarity:{' '}
+                {t.vocalClarity}:{' '}
                 <strong className="text-aura-blue">{aiMixResult.vocalClarityScore}%</strong>
               </span>
               <span>
-                Beat Balance:{' '}
+                {t.beatBalance}:{' '}
                 <strong className="text-aura-green">{aiMixResult.beatBalanceScore}%</strong>
               </span>
             </div>
@@ -220,26 +207,26 @@ export const MixingStudio: React.FC<MixingStudioProps> = ({
 
       {/* Track Selector Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        {tracks.map((t) => (
+        {tracks.map((tItem) => (
           <button
-            key={t.id}
-            onClick={() => setSelectedTrackId(t.id)}
+            key={tItem.id}
+            onClick={() => setSelectedTrackId(tItem.id)}
             className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border flex items-center gap-2 ${
-              selectedTrackId === t.id
+              selectedTrackId === tItem.id
                 ? 'bg-surface-100 text-white border-aura-blue shadow-glow'
                 : 'bg-surface-200 text-gray-400 border-surface-50/20 hover:text-white'
             }`}
           >
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: t.color }} />
-            <span>{t.name}</span>
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tItem.color }} />
+            <span>{tItem.name}</span>
           </button>
         ))}
       </div>
 
-      {/* Presets Bar */}
+      {/* Presets */}
       <div className="space-y-1.5">
         <label className="text-[10px] font-mono text-gray-400 uppercase">
-          Vocal Style Presets
+          {t.presetsLabel}
         </label>
         <div className="flex flex-wrap gap-2">
           {Object.keys(VOCAL_PRESETS).map((pName) => (
@@ -254,22 +241,21 @@ export const MixingStudio: React.FC<MixingStudioProps> = ({
         </div>
       </div>
 
-      {/* Full DSP Channel Strip for Active Track */}
+      {/* Channel Strip */}
       {currentTrack && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {/* Module 1: HighPass & 3-Band Parametric EQ */}
+          {/* Module 1: EQ */}
           <div className="bg-surface-200 border border-surface-50/30 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-surface-50/20 pb-2">
               <h3 className="font-bold text-xs uppercase tracking-wider text-white font-mono">
-                1. Equalizer & HPF
+                {t.eqModuleTitle}
               </h3>
-              <span className="text-[10px] font-mono text-aura-blue">Clean Lows</span>
             </div>
 
             <div className="space-y-3 text-xs">
               <div className="space-y-1">
                 <div className="flex justify-between font-mono text-[10px] text-gray-400">
-                  <span>HIGH-PASS FILTER</span>
+                  <span>{t.hpfLabel}</span>
                   <span className="text-white font-bold">{currentTrack.effects.highPassFreq} Hz</span>
                 </div>
                 <input
@@ -290,7 +276,7 @@ export const MixingStudio: React.FC<MixingStudioProps> = ({
 
               <div className="space-y-1">
                 <div className="flex justify-between font-mono text-[10px] text-gray-400">
-                  <span>LOW SHELF (250 Hz)</span>
+                  <span>{t.lowShelfLabel}</span>
                   <span className="text-white font-bold">{currentTrack.effects.eq.low} dB</span>
                 </div>
                 <input
@@ -311,7 +297,7 @@ export const MixingStudio: React.FC<MixingStudioProps> = ({
 
               <div className="space-y-1">
                 <div className="flex justify-between font-mono text-[10px] text-gray-400">
-                  <span>MID PRESENCE ({currentTrack.effects.eq.midFreq} Hz)</span>
+                  <span>{t.midPresenceLabel}</span>
                   <span className="text-white font-bold">{currentTrack.effects.eq.mid} dB</span>
                 </div>
                 <input
@@ -332,7 +318,7 @@ export const MixingStudio: React.FC<MixingStudioProps> = ({
 
               <div className="space-y-1">
                 <div className="flex justify-between font-mono text-[10px] text-gray-400">
-                  <span>HIGH SHELF AIR (8 kHz)</span>
+                  <span>{t.highAirLabel}</span>
                   <span className="text-white font-bold">{currentTrack.effects.eq.high} dB</span>
                 </div>
                 <input
@@ -353,19 +339,18 @@ export const MixingStudio: React.FC<MixingStudioProps> = ({
             </div>
           </div>
 
-          {/* Module 2: Dynamics Compressor & De-Esser */}
+          {/* Module 2: Compressor */}
           <div className="bg-surface-200 border border-surface-50/30 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-surface-50/20 pb-2">
               <h3 className="font-bold text-xs uppercase tracking-wider text-white font-mono">
-                2. Compressor & De-Esser
+                {t.compModuleTitle}
               </h3>
-              <span className="text-[10px] font-mono text-aura-purple">Vocal Punch</span>
             </div>
 
             <div className="space-y-3 text-xs">
               <div className="space-y-1">
                 <div className="flex justify-between font-mono text-[10px] text-gray-400">
-                  <span>THRESHOLD</span>
+                  <span>{t.thresholdLabel}</span>
                   <span className="text-white font-bold">{currentTrack.effects.compressor.threshold} dB</span>
                 </div>
                 <input
@@ -386,7 +371,7 @@ export const MixingStudio: React.FC<MixingStudioProps> = ({
 
               <div className="space-y-1">
                 <div className="flex justify-between font-mono text-[10px] text-gray-400">
-                  <span>RATIO</span>
+                  <span>{t.ratioLabel}</span>
                   <span className="text-white font-bold">{currentTrack.effects.compressor.ratio}:1</span>
                 </div>
                 <input
@@ -407,7 +392,7 @@ export const MixingStudio: React.FC<MixingStudioProps> = ({
 
               <div className="space-y-1">
                 <div className="flex justify-between font-mono text-[10px] text-gray-400">
-                  <span>DE-ESSER FREQUENCY</span>
+                  <span>{t.deEsserLabel}</span>
                   <span className="text-white font-bold">{currentTrack.effects.deEsser.frequency} Hz</span>
                 </div>
                 <input
@@ -428,19 +413,18 @@ export const MixingStudio: React.FC<MixingStudioProps> = ({
             </div>
           </div>
 
-          {/* Module 3: Reverb, Delay & Saturation */}
+          {/* Module 3: Space & Saturation */}
           <div className="bg-surface-200 border border-surface-50/30 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-surface-50/20 pb-2">
               <h3 className="font-bold text-xs uppercase tracking-wider text-white font-mono">
-                3. Space & Saturation
+                {t.spaceModuleTitle}
               </h3>
-              <span className="text-[10px] font-mono text-aura-gold">Dimension</span>
             </div>
 
             <div className="space-y-3 text-xs">
               <div className="space-y-1">
                 <div className="flex justify-between font-mono text-[10px] text-gray-400">
-                  <span>ANALOGUE TAPE DRIVE</span>
+                  <span>{t.tapeDriveLabel}</span>
                   <span className="text-white font-bold">{currentTrack.effects.saturation.drive}%</span>
                 </div>
                 <input
@@ -465,7 +449,7 @@ export const MixingStudio: React.FC<MixingStudioProps> = ({
 
               <div className="space-y-1">
                 <div className="flex justify-between font-mono text-[10px] text-gray-400">
-                  <span>VOCAL REVERB MIX</span>
+                  <span>{t.reverbMixLabel}</span>
                   <span className="text-white font-bold">
                     {Math.round(currentTrack.effects.reverb.mix * 100)}%
                   </span>
@@ -492,7 +476,7 @@ export const MixingStudio: React.FC<MixingStudioProps> = ({
 
               <div className="space-y-1">
                 <div className="flex justify-between font-mono text-[10px] text-gray-400">
-                  <span>STEREO DELAY MIX</span>
+                  <span>{t.delayMixLabel}</span>
                   <span className="text-white font-bold">
                     {Math.round(currentTrack.effects.delay.mix * 100)}%
                   </span>

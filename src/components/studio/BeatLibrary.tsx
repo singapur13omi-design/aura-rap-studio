@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Flame, Play, Plus, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Flame, Plus, ShieldCheck } from 'lucide-react';
 import { generateHipHopBeat } from '@/lib/audio/synthesizer';
 import { HipHopGenre } from '@/types';
+import { useI18n } from '@/lib/i18n';
 
 interface BeatItem {
   id: string;
@@ -22,6 +23,7 @@ interface BeatLibraryProps {
 }
 
 export const BeatLibrary: React.FC<BeatLibraryProps> = ({ onLoadBeatToTimeline }) => {
+  const { t } = useI18n();
   const [beats, setBeats] = useState<BeatItem[]>([]);
   const [loadingBeatId, setLoadingBeatId] = useState<string | null>(null);
 
@@ -56,27 +58,25 @@ export const BeatLibrary: React.FC<BeatLibraryProps> = ({ onLoadBeatToTimeline }
 
   return (
     <div className="flex-1 bg-surface-300 p-6 overflow-y-auto space-y-6">
-      {/* Header */}
       <div className="bg-surface-200 border border-surface-50/30 p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <Flame className="w-5 h-5 text-aura-red" />
             <h2 className="text-xl font-bold text-white tracking-wide">
-              Royalty-Free Hip-Hop Beat Library
+              {t.beatLibraryTitle}
             </h2>
           </div>
           <p className="text-xs text-gray-400 mt-1">
-            Curated high-impact rap beats, trap 808s, UK drill glides, and vintage boom-bap chops ready for immediate recording.
+            {t.beatLibraryDesc}
           </p>
         </div>
 
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-aura-blue/10 border border-aura-blue/30 text-xs text-aura-blue font-mono">
           <ShieldCheck className="w-4 h-4 shrink-0" />
-          <span>100% Royalty-Free Commercial License Included</span>
+          <span>{t.royaltyFreeBadge}</span>
         </div>
       </div>
 
-      {/* Grid of Beats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {beats.map((beat) => (
           <div
@@ -107,7 +107,7 @@ export const BeatLibrary: React.FC<BeatLibraryProps> = ({ onLoadBeatToTimeline }
               ) : (
                 <Plus className="w-3.5 h-3.5 text-aura-blue" />
               )}
-              {loadingBeatId === beat.id ? 'SYNTHESIZING BEAT...' : 'LOAD INTO STUDIO TIMELINE'}
+              {loadingBeatId === beat.id ? t.synthesizingBeat : t.loadIntoTimeline}
             </button>
           </div>
         ))}

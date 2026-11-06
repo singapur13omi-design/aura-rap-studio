@@ -19,18 +19,18 @@ import { DashboardView } from '@/components/studio/DashboardView';
 import { MultitrackAudioEngine } from '@/lib/audio/engine';
 import { generateHipHopBeat } from '@/lib/audio/synthesizer';
 import { processAutoTuneBuffer } from '@/lib/audio/autotune';
+import { I18nProvider, useI18n } from '@/lib/i18n';
 import {
   ProjectData,
   AudioTrackItem,
   LayerType,
-  TrackFXChain,
-  AutoTuneSettings,
   AIAnalysisResult,
   HipHopGenre,
 } from '@/types';
 import { RecordingResult } from '@/lib/audio/recorder';
 
-export default function AuraRapStudioApp() {
+function AuraRapStudioContent() {
+  const { t, language } = useI18n();
   const [currentTab, setCurrentTab] = useState<StudioTab>('DASHBOARD');
   const [projects, setProjects] = useState<ProjectData[]>([]);
   const [currentProject, setCurrentProject] = useState<ProjectData | null>(null);
@@ -62,25 +62,53 @@ export default function AuraRapStudioApp() {
     };
   }, []);
 
+  // Keyboard Shortcuts: Space (Play/Pause), R (Record), Escape (Close Modals)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+      if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
+        return;
+      }
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (engineRef.current?.getIsPlaying()) {
+          engineRef.current.pause();
+        } else {
+          engineRef.current?.play();
+        }
+      } else if (e.code === 'KeyR' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        const mainVocal = currentProject?.tracks.find((trk) => trk.layerType === 'MAIN_VOCAL');
+        setRecordingTargetTrackId(mainVocal?.id || currentProject?.tracks[0]?.id);
+        setRecordingModalOpen(true);
+      } else if (e.code === 'Escape') {
+        setRecordingModalOpen(false);
+        setAiAssistantOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentProject]);
+
   // Fetch Projects from database or create initial demo project
   const fetchProjects = useCallback(async () => {
     try {
       const res = await fetch('/api/projects');
       const data = await res.json();
       if (data.success && data.projects.length > 0) {
-        // Parse effects JSON
         const parsed: ProjectData[] = data.projects.map((p: any) => ({
           ...p,
-          tracks: (p.tracks || []).map((t: any) => ({
-            ...t,
-            effects: typeof t.effects === 'string' ? JSON.parse(t.effects) : t.effects,
+          tracks: (p.tracks || []).map((trk: any) => ({
+            ...trk,
+            effects: typeof trk.effects === 'string' ? JSON.parse(trk.effects) : trk.effects,
           })),
         }));
         setProjects(parsed);
       } else {
-        // Seed default initial project
         handleCreateProject({
-          title: 'Demon Trap Freestyle',
+          title: language === 'sk' ? 'Démonický Trap Freestyle' : 'Demon Trap Freestyle',
           genre: 'TRAP',
           bpm: 140,
           keyScale: 'C Minor',
@@ -91,7 +119,7 @@ export default function AuraRapStudioApp() {
     } catch (err) {
       console.error('Failed to load projects:', err);
     }
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     fetchProjects();
@@ -126,13 +154,12 @@ export default function AuraRapStudioApp() {
       if (resData.success) {
         const newProj: ProjectData = {
           ...resData.project,
-          tracks: resData.project.tracks.map((t: any) => ({
-            ...t,
-            effects: typeof t.effects === 'string' ? JSON.parse(t.effects) : t.effects,
+          tracks: resData.project.tracks.map((trk: any) => ({
+            ...trk,
+            effects: typeof trk.effects === 'string' ? JSON.parse(trk.effects) : trk.effects,
           })),
         };
 
-        // Synthesize an initial demo beat buffer for the beat track
         const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
         const ctx = new AudioCtxClass();
         const { fullBeat } = await generateHipHopBeat(ctx, {
@@ -142,7 +169,7 @@ export default function AuraRapStudioApp() {
           durationSeconds: 32,
         });
 
-        const beatTrack = newProj.tracks.find((t) => t.layerType === 'BEAT');
+        const beatTrack = newProj.tracks.find((trk) => trk.layerType === 'BEAT');
         if (beatTrack) {
           beatTrack.audioBuffer = fullBeat;
           beatTrack.duration = fullBeat.duration;
@@ -161,10 +188,9 @@ export default function AuraRapStudioApp() {
   const handleOpenProject = async (projectId: string) => {
     const proj = projects.find((p) => p.id === projectId);
     if (proj) {
-      // Ensure beat audio buffer is synthesized if not loaded
       const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
       const ctx = new AudioCtxClass();
-      const beatTrack = proj.tracks.find((t) => t.layerType === 'BEAT' && !t.audioBuffer);
+      const beatTrack = proj.tracks.find((trk) => trk.layerType === 'BEAT' && !trk.audioBuffer);
       if (beatTrack) {
         const { fullBeat } = await generateHipHopBeat(ctx, {
           genre: proj.genre,
@@ -200,21 +226,20 @@ export default function AuraRapStudioApp() {
         }),
       });
 
-      // Update tracks in DB
-      for (const t of currentProject.tracks) {
+      for (const trk of currentProject.tracks) {
         await fetch('/api/tracks', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            id: t.id,
-            name: t.name,
-            volume: t.volume,
-            pan: t.pan,
-            muted: t.muted,
-            soloed: t.soloed,
-            startTime: t.startTime,
-            duration: t.duration,
-            effects: t.effects,
+            id: trk.id,
+            name: trk.name,
+            volume: trk.volume,
+            pan: trk.pan,
+            muted: trk.muted,
+            soloed: trk.soloed,
+            startTime: trk.startTime,
+            duration: trk.duration,
+            effects: trk.effects,
           }),
         });
       }
@@ -230,7 +255,7 @@ export default function AuraRapStudioApp() {
     const proj = projects.find((p) => p.id === projectId);
     if (!proj) return;
     handleCreateProject({
-      title: `${proj.title} (Copy)`,
+      title: `${proj.title} (Kópia)`,
       genre: proj.genre,
       bpm: proj.bpm,
       keyScale: proj.keyScale,
@@ -241,7 +266,8 @@ export default function AuraRapStudioApp() {
 
   // Delete Project
   const handleDeleteProject = async (projectId: string) => {
-    if (!confirm('Are you sure you want to delete this project?')) return;
+    const confirmMsg = language === 'sk' ? 'Naozaj chceš vymazať tento projekt?' : 'Are you sure you want to delete this project?';
+    if (!confirm(confirmMsg)) return;
     try {
       await fetch(`/api/projects/${projectId}`, { method: 'DELETE' });
       setProjects((prev) => prev.filter((p) => p.id !== projectId));
@@ -254,20 +280,18 @@ export default function AuraRapStudioApp() {
     }
   };
 
-  // Transport Controls
   const handlePlay = () => engineRef.current?.play();
   const handlePause = () => engineRef.current?.pause();
   const handleStop = () => engineRef.current?.stop();
   const handleSeek = (sec: number) => engineRef.current?.seek(sec);
 
-  // Track operations
   const handleUpdateTrack = (trackId: string, updates: Partial<AudioTrackItem>) => {
     if (!currentProject) return;
     setCurrentProject((prev) => {
       if (!prev) return null;
       return {
         ...prev,
-        tracks: prev.tracks.map((t) => (t.id === trackId ? { ...t, ...updates } : t)),
+        tracks: prev.tracks.map((trk) => (trk.id === trackId ? { ...trk, ...updates } : trk)),
       };
     });
   };
@@ -278,7 +302,7 @@ export default function AuraRapStudioApp() {
       if (!prev) return null;
       return {
         ...prev,
-        tracks: prev.tracks.filter((t) => t.id !== trackId),
+        tracks: prev.tracks.filter((trk) => trk.id !== trackId),
       };
     });
     fetch(`/api/tracks?id=${trackId}`, { method: 'DELETE' }).catch(console.error);
@@ -338,13 +362,11 @@ export default function AuraRapStudioApp() {
     }).catch(console.error);
   };
 
-  // Open Recording modal for specific track
   const handleOpenRecordTrack = (trackId: string) => {
     setRecordingTargetTrackId(trackId);
     setRecordingModalOpen(true);
   };
 
-  // Save recorded audio into track
   const handleSaveRecording = (
     trackId: string,
     result: RecordingResult,
@@ -360,7 +382,6 @@ export default function AuraRapStudioApp() {
     });
   };
 
-  // Import local audio file (WAV, MP3, etc.)
   const handleImportAudio = async (trackId: string, file: File) => {
     try {
       const arrayBuffer = await file.arrayBuffer();
@@ -375,15 +396,14 @@ export default function AuraRapStudioApp() {
       });
     } catch (err) {
       console.error('Audio import failed:', err);
-      alert('Could not decode audio file. Make sure it is a valid WAV, MP3, or OGG file.');
+      alert(language === 'sk' ? 'Súbor sa nepodarilo dekódovať. Skontroluj formát (WAV, MP3, FLAC).' : 'Could not decode audio file.');
     }
   };
 
-  // Insert generated beat into timeline
   const handleAddBeatTrack = (buffer: AudioBuffer, title: string, bpm: number) => {
     if (!currentProject) return;
 
-    let beatTrack = currentProject.tracks.find((t) => t.layerType === 'BEAT');
+    let beatTrack = currentProject.tracks.find((trk) => trk.layerType === 'BEAT');
     if (beatTrack) {
       handleUpdateTrack(beatTrack.id, {
         name: title,
@@ -398,7 +418,6 @@ export default function AuraRapStudioApp() {
     setCurrentTab('STUDIO');
   };
 
-  // Apply Rap Flow analysis recommendations
   const handleApplyAnalysis = (analysis: AIAnalysisResult) => {
     if (!currentProject) return;
     setCurrentProject((prev) => {
@@ -421,48 +440,48 @@ export default function AuraRapStudioApp() {
     }).catch(console.error);
   };
 
-  // Sync vocal with beat
   const handleSyncVocalWithBeat = () => {
     if (!currentProject) return;
-    const mainVocal = currentProject.tracks.find((t) => t.layerType === 'MAIN_VOCAL');
-    const beatTrack = currentProject.tracks.find((t) => t.layerType === 'BEAT');
+    const mainVocal = currentProject.tracks.find((trk) => trk.layerType === 'MAIN_VOCAL');
+    const beatTrack = currentProject.tracks.find((trk) => trk.layerType === 'BEAT');
 
     if (mainVocal && beatTrack) {
-      // Align vocal start to nearest beat downbeat
       const secondsPerBeat = 60 / currentProject.bpm;
       const barDuration = secondsPerBeat * 4;
       const nearestBar = Math.round((mainVocal.startTime || 0) / barDuration) * barDuration;
 
       handleUpdateTrack(mainVocal.id, { startTime: nearestBar });
-      alert(`Synchronized! Main vocal snapped to bar marker at ${nearestBar.toFixed(2)}s.`);
+      alert(
+        language === 'sk'
+          ? `Zosynchronizované! Hlavný vokál bol magneticky prichytený na takt pri ${nearestBar.toFixed(2)}s.`
+          : `Synchronized! Main vocal snapped to bar marker at ${nearestBar.toFixed(2)}s.`
+      );
     }
   };
 
-  // Bake offline autotune into buffer
   const handleApplyOfflineAutoTune = (trackId: string) => {
-    const track = currentProject?.tracks.find((t) => t.id === trackId);
-    if (!track || !track.audioBuffer) return;
+    const trk = currentProject?.tracks.find((tItem) => tItem.id === trackId);
+    if (!trk || !trk.audioBuffer) return;
 
     const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
     const ctx = new AudioCtxClass();
-    const tunedBuffer = processAutoTuneBuffer(track.audioBuffer, ctx, track.effects.autoTune);
+    const tunedBuffer = processAutoTuneBuffer(trk.audioBuffer, ctx, trk.effects.autoTune);
 
     handleUpdateTrack(trackId, { audioBuffer: tunedBuffer });
-    alert(`Auto-Tune successfully baked into ${track.name}!`);
+    alert(language === 'sk' ? `Auto-Tune bol úspešne upečený do stopy ${trk.name}!` : `Auto-Tune successfully baked into ${trk.name}!`);
   };
 
-  // AI Assistant action handler
   const handleApplyAssistantAction = (action: any) => {
     if (!currentProject) return;
 
     if (action.type === 'UPDATE_FX') {
       const targetTracks = currentProject.tracks.filter(
-        (t) => action.layer === 'Master' || t.layerType === action.layer
+        (trk) => action.layer === 'Master' || trk.layerType === action.layer
       );
-      for (const t of targetTracks) {
-        handleUpdateTrack(t.id, {
+      for (const trk of targetTracks) {
+        handleUpdateTrack(trk.id, {
           effects: {
-            ...t.effects,
+            ...trk.effects,
             ...action.changes,
           },
         });
@@ -474,9 +493,8 @@ export default function AuraRapStudioApp() {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-background text-foreground font-sans">
-      {/* Studio Top Transport Header */}
       <StudioHeader
-        projectTitle={currentProject?.title || 'AURA RAP STUDIO'}
+        projectTitle={currentProject?.title || t.brandName}
         isPlaying={isPlaying}
         currentTime={currentTime}
         bpm={currentProject?.bpm || 140}
@@ -489,7 +507,7 @@ export default function AuraRapStudioApp() {
         onPause={handlePause}
         onStop={handleStop}
         onRecordClick={() => {
-          const mainVocal = currentProject?.tracks.find((t) => t.layerType === 'MAIN_VOCAL');
+          const mainVocal = currentProject?.tracks.find((trk) => trk.layerType === 'MAIN_VOCAL');
           handleOpenRecordTrack(mainVocal?.id || currentProject?.tracks[0]?.id || '');
         }}
         onBpmChange={(bpm) =>
@@ -510,11 +528,9 @@ export default function AuraRapStudioApp() {
         onSaveProject={handleSaveProject}
       />
 
-      {/* Main Studio Body: Sidebar + Active Tab Content */}
       <div className="flex-1 flex overflow-hidden">
         <StudioSidebar currentTab={currentTab} onSelectTab={setCurrentTab} />
 
-        {/* Tab 1: Dashboard */}
         {currentTab === 'DASHBOARD' && (
           <DashboardView
             projects={projects}
@@ -525,7 +541,6 @@ export default function AuraRapStudioApp() {
           />
         )}
 
-        {/* Tab 2: Multitrack Timeline */}
         {currentTab === 'STUDIO' && currentProject && (
           <MultitrackTimeline
             tracks={currentProject.tracks}
@@ -542,7 +557,6 @@ export default function AuraRapStudioApp() {
           />
         )}
 
-        {/* Tab 3: AI Producer & Beat Generator */}
         {currentTab === 'AI_PRODUCER' && currentProject && (
           <AiProducerSection
             tracks={currentProject.tracks}
@@ -554,16 +568,15 @@ export default function AuraRapStudioApp() {
           />
         )}
 
-        {/* Tab 4: Vocal Layers Studio */}
         {currentTab === 'VOCAL_LAYERS' && currentProject && (
           <VocalLayersStudio
             tracks={currentProject.tracks}
             onRecordLayer={(layerType) => {
-              let track = currentProject.tracks.find((t) => t.layerType === layerType);
-              if (!track) {
+              let trk = currentProject.tracks.find((tItem) => tItem.layerType === layerType);
+              if (!trk) {
                 handleAddTrack(layerType);
               }
-              const target = currentProject.tracks.find((t) => t.layerType === layerType);
+              const target = currentProject.tracks.find((tItem) => tItem.layerType === layerType);
               handleOpenRecordTrack(target?.id || '');
             }}
             onOpenFX={() => setCurrentTab('MIXING')}
@@ -572,7 +585,6 @@ export default function AuraRapStudioApp() {
           />
         )}
 
-        {/* Tab 5: Mixing & DSP Channel Strip */}
         {currentTab === 'MIXING' && currentProject && (
           <MixingStudio
             tracks={currentProject.tracks}
@@ -584,12 +596,11 @@ export default function AuraRapStudioApp() {
           />
         )}
 
-        {/* Tab 6: Auto-Tune Pitch Studio */}
         {currentTab === 'AUTOTUNE' && currentProject && (
           <AutoTuneModule
             tracks={currentProject.tracks}
             onUpdateTrackAutoTune={(trackId, autoTuneSettings) => {
-              const trk = currentProject.tracks.find((t) => t.id === trackId);
+              const trk = currentProject.tracks.find((tItem) => tItem.id === trackId);
               if (trk) {
                 handleUpdateTrack(trackId, {
                   effects: { ...trk.effects, autoTune: autoTuneSettings },
@@ -600,7 +611,6 @@ export default function AuraRapStudioApp() {
           />
         )}
 
-        {/* Tab 7: AI Mastering */}
         {currentTab === 'MASTERING' && currentProject && (
           <MasteringStudio
             tracks={currentProject.tracks}
@@ -617,41 +627,36 @@ export default function AuraRapStudioApp() {
           />
         )}
 
-        {/* Tab 8: Beat Library */}
         {currentTab === 'BEAT_LIBRARY' && (
           <BeatLibrary onLoadBeatToTimeline={handleAddBeatTrack} />
         )}
 
-        {/* Tab 9: My Voice Profiles */}
         {currentTab === 'MY_VOICE' && currentProject && (
           <VoiceProfileSection
             currentFX={currentProject.tracks[0]?.effects}
             onApplyProfileFX={(fx) => {
               if (currentProject.tracks[0]) {
                 handleUpdateTrack(currentProject.tracks[0].id, { effects: fx });
-                alert('Vocal profile FX applied to primary rap vocal track!');
+                alert(language === 'sk' ? 'Vokálny profil bol úspešne aplikovaný na hlavný rapový vokál!' : 'Vocal profile FX applied to primary rap vocal track!');
               }
             }}
           />
         )}
 
-        {/* Tab 10: Export Studio */}
         {currentTab === 'EXPORT' && currentProject && (
           <ExportStudio project={currentProject} tracks={currentProject.tracks} />
         )}
       </div>
 
-      {/* Recording Studio Modal */}
       {currentProject && (
         <RecordingModal
           isOpen={recordingModalOpen}
           onClose={() => setRecordingModalOpen(false)}
-          targetTrack={currentProject.tracks.find((t) => t.id === recordingTargetTrackId)}
+          targetTrack={currentProject.tracks.find((trk) => trk.id === recordingTargetTrackId)}
           onSaveRecording={handleSaveRecording}
         />
       )}
 
-      {/* AI Producer Assistant Drawer */}
       {currentProject && (
         <AiMusicAssistant
           isOpen={aiAssistantOpen}
@@ -662,5 +667,13 @@ export default function AuraRapStudioApp() {
         />
       )}
     </div>
+  );
+}
+
+export default function AuraRapStudioApp() {
+  return (
+    <I18nProvider>
+      <AuraRapStudioContent />
+    </I18nProvider>
   );
 }

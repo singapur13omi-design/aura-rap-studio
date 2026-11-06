@@ -12,8 +12,8 @@ import {
   Flame,
   UserCheck,
   Download,
-  Settings,
 } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
 
 export type StudioTab =
   | 'DASHBOARD'
@@ -36,17 +36,19 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
   currentTab,
   onSelectTab,
 }) => {
+  const { t } = useI18n();
+
   const navItems = [
-    { id: 'DASHBOARD' as StudioTab, label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'STUDIO' as StudioTab, label: 'Timeline Studio', icon: Layers, highlight: true },
-    { id: 'AI_PRODUCER' as StudioTab, label: 'AI Producer', icon: Sparkles, badge: 'AI' },
-    { id: 'VOCAL_LAYERS' as StudioTab, label: 'Vocal Layers', icon: Mic2 },
-    { id: 'MIXING' as StudioTab, label: 'Mixing & FX', icon: Sliders },
-    { id: 'AUTOTUNE' as StudioTab, label: 'Auto-Tune Rack', icon: AudioWaveform },
-    { id: 'MASTERING' as StudioTab, label: 'AI Mastering', icon: Disc3, badge: 'LUFS' },
-    { id: 'BEAT_LIBRARY' as StudioTab, label: 'Beat Library', icon: Flame },
-    { id: 'MY_VOICE' as StudioTab, label: 'My Voice', icon: UserCheck },
-    { id: 'EXPORT' as StudioTab, label: 'Export Studio', icon: Download },
+    { id: 'DASHBOARD' as StudioTab, label: t.navDashboard, icon: LayoutDashboard },
+    { id: 'STUDIO' as StudioTab, label: t.navStudio, icon: Layers, highlight: true },
+    { id: 'AI_PRODUCER' as StudioTab, label: t.navAiProducer, icon: Sparkles, badge: 'AI' },
+    { id: 'VOCAL_LAYERS' as StudioTab, label: t.navVocalLayers, icon: Mic2 },
+    { id: 'MIXING' as StudioTab, label: t.navMixing, icon: Sliders },
+    { id: 'AUTOTUNE' as StudioTab, label: t.navAutoTune, icon: AudioWaveform },
+    { id: 'MASTERING' as StudioTab, label: t.navMastering, icon: Disc3, badge: 'LUFS' },
+    { id: 'BEAT_LIBRARY' as StudioTab, label: t.navBeatLibrary, icon: Flame },
+    { id: 'MY_VOICE' as StudioTab, label: t.navMyVoice, icon: UserCheck },
+    { id: 'EXPORT' as StudioTab, label: t.navExport, icon: Download },
   ];
 
   return (
@@ -62,7 +64,7 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
               AURA <span className="text-aura-blue font-mono text-xs">RAP</span>
             </h2>
             <p className="text-[10px] text-gray-400 font-mono tracking-tight">
-              YOUR VOICE. YOUR SOUND.
+              {t.brandTagline}
             </p>
           </div>
         </div>
@@ -105,14 +107,14 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
       <div className="p-3 border-t border-surface-50/20 hidden md:block">
         <div className="bg-surface-200/60 p-2.5 rounded-xl border border-surface-50/20 text-[11px] space-y-1.5">
           <div className="flex items-center justify-between text-gray-400 font-mono">
-            <span>Audio Engine</span>
+            <span>{t.audioEngineStatus}</span>
             <span className="text-aura-green flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-aura-green animate-pulse" /> 48 kHz
             </span>
           </div>
           <div className="flex items-center justify-between text-gray-400 font-mono">
-            <span>AI Producer</span>
-            <span className="text-aura-blue">Active</span>
+            <span>{t.aiProducer}</span>
+            <span className="text-aura-blue">{t.aiProducerActive}</span>
           </div>
         </div>
       </div>

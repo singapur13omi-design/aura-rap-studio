@@ -8,15 +8,12 @@ import {
   Music,
   Trash2,
   Copy,
-  Archive,
-  ArrowRight,
-  Sparkles,
   Layers,
-  Mic,
-  Upload,
+  Sparkles,
 } from 'lucide-react';
 import { ProjectData, HipHopGenre } from '@/types';
 import { formatTime } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n';
 
 interface DashboardViewProps {
   projects: ProjectData[];
@@ -40,18 +37,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onDuplicateProject,
   onDeleteProject,
 }) => {
+  const { t, language } = useI18n();
   const [showNewTrackModal, setShowNewTrackModal] = useState<boolean>(false);
   const [title, setTitle] = useState<string>('');
   const [genre, setGenre] = useState<HipHopGenre>('TRAP');
   const [bpm, setBpm] = useState<number>(140);
   const [keyScale, setKeyScale] = useState<string>('C Minor');
-  const [language, setLanguage] = useState<string>('sk');
   const [projectType, setProjectType] = useState<string>('RECORD_VOICE');
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onCreateProject({
-      title: title.trim() || 'New Rap Track',
+      title: title.trim() || (language === 'sk' ? 'Nový rapový track' : 'New Rap Track'),
       genre,
       bpm,
       keyScale,
@@ -63,10 +60,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   const projectTypes = [
-    { id: 'RECORD_VOICE', title: '1. Record My Voice', desc: 'Jump straight into the vocal booth with metronome.' },
-    { id: 'START_BEAT', title: '2. Start With a Beat', desc: 'Pick or generate an 808 beat before recording vocals.' },
-    { id: 'UPLOAD_RAP', title: '3. Upload My Rap', desc: 'Import an existing rap acapella recording from file.' },
-    { id: 'FROM_EXISTING', title: '4. Existing Audio', desc: 'Import a complete song file or audio stems.' },
+    { id: 'RECORD_VOICE', title: t.workflowRecordVoice, desc: t.workflowRecordVoiceDesc },
+    { id: 'START_BEAT', title: t.workflowStartBeat, desc: t.workflowStartBeatDesc },
+    { id: 'UPLOAD_RAP', title: t.workflowUploadRap, desc: t.workflowUploadRapDesc },
+    { id: 'FROM_EXISTING', title: t.workflowExistingAudio, desc: t.workflowExistingAudioDesc },
   ];
 
   return (
@@ -75,13 +72,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="bg-gradient-to-r from-surface-200 via-surface-200 to-aura-blue/15 border border-surface-50/40 p-8 rounded-3xl shadow-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-2 max-w-xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-aura-blue/20 text-aura-blue text-xs font-mono font-bold border border-aura-blue/30">
-            <Sparkles className="w-3.5 h-3.5" /> AURA RAP STUDIO 2.0
+            <Sparkles className="w-3.5 h-3.5" /> {t.version}
           </div>
           <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
-            YOUR VOICE. YOUR FLOW. YOUR SOUND.
+            {t.brandTagline}
           </h1>
           <p className="text-xs md:text-sm text-gray-400 leading-relaxed">
-            Professional digital hip-hop workstation. Record raw human vocals, generate punchy 808 beats, arrange multi-voice layers, and master release-ready tracks.
+            {t.studioSubtitle}
           </p>
         </div>
 
@@ -89,7 +86,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           onClick={() => setShowNewTrackModal(true)}
           className="flex items-center justify-center gap-2 px-7 py-4 rounded-2xl bg-aura-blue hover:bg-aura-blue/90 text-black font-extrabold text-sm shadow-glow transition-all hover:scale-105 shrink-0"
         >
-          <Plus className="w-5 h-5 stroke-[3]" /> CREATE NEW TRACK
+          <Plus className="w-5 h-5 stroke-[3]" /> {t.createNewTrack}
         </button>
       </div>
 
@@ -97,20 +94,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-white tracking-wide uppercase font-mono flex items-center gap-2">
-            <Layers className="w-4 h-4 text-aura-blue" /> Your Studio Projects ({projects.length})
+            <Layers className="w-4 h-4 text-aura-blue" /> {t.yourProjects} ({projects.length})
           </h2>
         </div>
 
         {projects.length === 0 ? (
           <div className="bg-surface-200 border border-surface-50/30 rounded-2xl p-12 text-center space-y-3">
             <Music className="w-10 h-10 text-gray-600 mx-auto" />
-            <h3 className="text-white font-bold text-sm">No Projects Created Yet</h3>
-            <p className="text-xs text-gray-400">Click &quot;CREATE NEW TRACK&quot; to begin your first rap recording.</p>
+            <h3 className="text-white font-bold text-sm">{t.noProjectsYet}</h3>
+            <p className="text-xs text-gray-400">{t.noProjectsDesc}</p>
             <button
               onClick={() => setShowNewTrackModal(true)}
               className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-aura-blue text-black font-bold text-xs"
             >
-              <Plus className="w-4 h-4" /> Create Track
+              <Plus className="w-4 h-4" /> {t.createNewTrack}
             </button>
           </div>
         ) : (
@@ -144,7 +141,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       {formatTime(proj.duration || 0)}
                     </span>
                     <span>•</span>
-                    <span>{proj.tracks?.length || 0} Tracks</span>
+                    <span>{proj.tracks?.length || 0} {t.tracksCount}</span>
                   </div>
                 </div>
 
@@ -157,14 +154,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => onDuplicateProject(proj.id)}
-                      title="Duplicate Project"
+                      title={t.copy}
                       className="p-1.5 hover:text-white hover:bg-surface-100 rounded"
                     >
                       <Copy className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => onDeleteProject(proj.id)}
-                      title="Delete Project"
+                      title={t.delete}
                       className="p-1.5 hover:text-aura-red hover:bg-surface-100 rounded"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -189,7 +186,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div className="w-8 h-8 rounded-lg bg-aura-blue/20 text-aura-blue flex items-center justify-center">
                   <Plus className="w-4 h-4 stroke-[3]" />
                 </div>
-                <h3 className="font-bold text-white text-base">Create New Track</h3>
+                <h3 className="font-bold text-white text-base">{t.modalNewTrackTitle}</h3>
               </div>
               <button
                 type="button"
@@ -204,14 +201,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {/* Title */}
               <div className="space-y-1">
                 <label className="text-gray-400 font-mono text-[10px] uppercase">
-                  Track Title
+                  {t.trackTitleLabel}
                 </label>
                 <input
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Midnight Freestyle"
+                  placeholder={t.trackTitlePlaceholder}
                   className="w-full px-3 py-2 bg-surface-100 border border-surface-50/40 rounded-xl text-white focus:outline-none focus:border-aura-blue"
                 />
               </div>
@@ -220,7 +217,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-gray-400 font-mono text-[10px] uppercase">
-                    Hip-Hop Style
+                    {t.hipHopStyleLabel}
                   </label>
                   <select
                     value={genre}
@@ -240,7 +237,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                 <div className="space-y-1">
                   <label className="text-gray-400 font-mono text-[10px] uppercase">
-                    Tempo (BPM)
+                    {t.tempoLabel}
                   </label>
                   <input
                     type="number"
@@ -256,7 +253,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {/* Project Type */}
               <div className="space-y-1.5">
                 <label className="text-gray-400 font-mono text-[10px] uppercase">
-                  Starting Workflow
+                  {t.workflowLabel}
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {projectTypes.map((pt) => (
@@ -284,13 +281,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 onClick={() => setShowNewTrackModal(false)}
                 className="px-4 py-2 text-xs text-gray-400 hover:text-white"
               >
-                Cancel
+                {t.cancel}
               </button>
               <button
                 type="submit"
                 className="px-6 py-2.5 rounded-xl bg-aura-blue hover:bg-aura-blue/90 text-black font-bold text-xs shadow-glow transition-all"
               >
-                OPEN RECORDING STUDIO
+                {t.openRecordingStudio}
               </button>
             </div>
           </form>

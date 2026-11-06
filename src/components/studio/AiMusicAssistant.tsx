@@ -6,12 +6,11 @@ import {
   X,
   Send,
   Check,
-  RotateCcw,
   Bot,
-  User,
   Sliders,
 } from 'lucide-react';
 import { ProjectData, AudioTrackItem } from '@/types';
+import { useI18n } from '@/lib/i18n';
 
 interface AiMusicAssistantProps {
   isOpen: boolean;
@@ -36,11 +35,18 @@ export const AiMusicAssistant: React.FC<AiMusicAssistantProps> = ({
   tracks,
   onApplyAssistantAction,
 }) => {
+  const { t, language } = useI18n();
+
+  const initialGreeting =
+    language === 'sk'
+      ? `Ahoj! Som tvoj osobný AI rapový producent pre "${project.title}". Počúvam tvoj track (${project.bpm} BPM). Môžeš mi zadať požiadavku, napríklad: "Sprav môj hlas agresívnejší", "Pridaj viac basov do 808", "Navrhni ad-libs" alebo "Vyčisti vokál".`
+      : `Yo! I'm your AI rap producer for "${project.title}". Listening to your track (${project.bpm} BPM). You can ask me to: "Make my voice more aggressive", "Add punch to the 808", "Suggest ad-libs" or "Clean up vocals".`;
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'm-1',
       sender: 'assistant',
-      text: `Ahoj! Som tvoj AI hudobný producent pre "${project.title}". Počúvam tvoje vokály a beat (${project.bpm} BPM). Môžeš mi napísať požiadavku, napríklad: "Sprav môj hlas agresívnejší", "Pridaj viac basov do 808", "Navrhni ad-libs", alebo "Vyčisti vokál".`,
+      text: initialGreeting,
     },
   ]);
   const [inputText, setInputText] = useState<string>('');
@@ -67,6 +73,7 @@ export const AiMusicAssistant: React.FC<AiMusicAssistantProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text,
+          language,
           projectContext: {
             title: project.title,
             genre: project.genre,
@@ -100,7 +107,7 @@ export const AiMusicAssistant: React.FC<AiMusicAssistantProps> = ({
     );
   };
 
-  const quickPrompts = [
+  const quickPromptsSK = [
     'Sprav môj hlas agresívnejší',
     'Pridaj viac basov do 808',
     'Vyčisti vokál a sykavky',
@@ -108,13 +115,22 @@ export const AiMusicAssistant: React.FC<AiMusicAssistantProps> = ({
     'Navrhni ad-libs',
   ];
 
+  const quickPromptsEN = [
+    'Make my voice more aggressive',
+    'Add more punch to the 808',
+    'Clean up vocal and sibilance',
+    'Add delay to line ends',
+    'Suggest ad-libs',
+  ];
+
+  const quickPrompts = language === 'sk' ? quickPromptsSK : quickPromptsEN;
+
   return (
     <div className="fixed inset-y-0 right-0 z-40 w-full sm:w-96 bg-surface-200 border-l border-surface-50/30 flex flex-col shadow-2xl">
-      {/* Header */}
       <div className="p-4 bg-surface-100 border-b border-surface-50/30 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-aura-blue animate-pulse" />
-          <h3 className="font-bold text-sm text-white">AI Studio Assistant</h3>
+          <h3 className="font-bold text-sm text-white">{t.aiAssistantTitle}</h3>
         </div>
         <button
           onClick={onClose}
@@ -124,7 +140,6 @@ export const AiMusicAssistant: React.FC<AiMusicAssistantProps> = ({
         </button>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 p-4 overflow-y-auto space-y-3 text-xs">
         {messages.map((msg) => (
           <div
@@ -143,11 +158,10 @@ export const AiMusicAssistant: React.FC<AiMusicAssistantProps> = ({
               <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
             </div>
 
-            {/* Action Proposal Approval Card */}
             {msg.action && (
               <div className="mt-2 w-full max-w-[85%] bg-surface-300 p-3 rounded-xl border border-aura-purple/40 space-y-2">
                 <span className="text-[10px] font-mono text-aura-purple font-bold block uppercase flex items-center gap-1">
-                  <Sliders className="w-3 h-3" /> Navrhovaná úprava parametrov
+                  <Sliders className="w-3 h-3" /> {t.proposedAdjustment}
                 </span>
                 <p className="text-[11px] text-gray-300">
                   Target: {msg.action.layer || 'Master'}
@@ -155,14 +169,14 @@ export const AiMusicAssistant: React.FC<AiMusicAssistantProps> = ({
 
                 {msg.actionApplied ? (
                   <span className="text-[10px] font-mono text-aura-green flex items-center gap-1">
-                    <Check className="w-3 h-3" /> Zmeny boli úspešne aplikované
+                    <Check className="w-3 h-3" /> {t.changesApplied}
                   </span>
                 ) : (
                   <button
                     onClick={() => handleApproveAction(msg.id, msg.action)}
                     className="w-full py-1.5 rounded-lg bg-aura-purple hover:bg-aura-purple/90 text-white font-bold text-[11px] shadow-glow-purple transition-all flex items-center justify-center gap-1"
                   >
-                    <Check className="w-3 h-3" /> Schváliť a aplikovať do projektu
+                    <Check className="w-3 h-3" /> {t.approveAndApply}
                   </button>
                 )}
               </div>
@@ -173,12 +187,11 @@ export const AiMusicAssistant: React.FC<AiMusicAssistantProps> = ({
         {isLoading && (
           <div className="flex items-center gap-2 text-gray-400 text-xs">
             <Bot className="w-4 h-4 text-aura-blue animate-spin" />
-            <span>AI premýšľa nad rapovým mixom...</span>
+            <span>{t.aiAssistantThinking}</span>
           </div>
         )}
       </div>
 
-      {/* Quick Prompts */}
       <div className="px-3 py-2 border-t border-surface-50/20 flex items-center gap-1.5 overflow-x-auto text-[10px] text-gray-400 font-mono">
         {quickPrompts.map((qp) => (
           <button
@@ -191,7 +204,6 @@ export const AiMusicAssistant: React.FC<AiMusicAssistantProps> = ({
         ))}
       </div>
 
-      {/* Input Form */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -203,7 +215,7 @@ export const AiMusicAssistant: React.FC<AiMusicAssistantProps> = ({
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder="Napíš AI producentovi..."
+          placeholder={t.writeToAssistant}
           className="flex-1 px-3 py-2 bg-surface-200 border border-surface-50/40 rounded-xl text-xs text-white focus:outline-none focus:border-aura-blue"
         />
         <button

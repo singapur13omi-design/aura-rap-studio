@@ -4,18 +4,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Mic,
   Square,
-  Play,
   RotateCcw,
   Check,
   X,
   Headphones,
-  Sliders,
   AlertTriangle,
   Circle,
 } from 'lucide-react';
 import { VocalRecorder, RecordingResult } from '@/lib/audio/recorder';
 import { formatTime } from '@/lib/utils';
 import { AudioTrackItem } from '@/types';
+import { useI18n } from '@/lib/i18n';
 
 interface RecordingModalProps {
   isOpen: boolean;
@@ -30,6 +29,7 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
   targetTrack,
   onSaveRecording,
 }) => {
+  const { t } = useI18n();
   const [recorder, setRecorder] = useState<VocalRecorder | null>(null);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
@@ -39,18 +39,15 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
   const [countdown, setCountdown] = useState<number | null>(null);
 
   const [monitoringEnabled, setMonitoringEnabled] = useState<boolean>(false);
-  const [latencyMs, setLatencyMs] = useState<number>(45); // Standard browser audio round-trip compensation
+  const [latencyMs, setLatencyMs] = useState<number>(45);
 
   const [meterDb, setMeterDb] = useState<number>(-60);
   const [clipped, setClipped] = useState<boolean>(false);
 
   const [recordedResult, setRecordedResult] = useState<RecordingResult | null>(null);
-  const [isPlayingPreview, setIsPlayingPreview] = useState<boolean>(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Initialize recorder and enumerate devices
   useEffect(() => {
     if (!isOpen) {
       if (recorder) {
@@ -93,20 +90,17 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
     };
   }, [isOpen]);
 
-  // Handle countdown and record start
   const handleStartRecord = () => {
     if (!recorder) return;
     setClipped(false);
     setRecordedResult(null);
 
-    // 3-second countdown
     setCountdown(3);
     const countTimer = setInterval(() => {
       setCountdown((prev) => {
         if (prev === null || prev <= 1) {
           clearInterval(countTimer);
           setCountdown(null);
-          // Actually start recording
           recorder.start();
           setIsRecording(true);
           setRecordingSeconds(0);
@@ -163,9 +157,9 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
               <Mic className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="font-bold text-white text-base">Vocal Recording Booth</h2>
+              <h2 className="font-bold text-white text-base">{t.recordingBoothTitle}</h2>
               <p className="text-xs text-gray-400">
-                Target Track: <span className="text-aura-blue font-semibold">{targetTrack?.name || 'Vocal Track'}</span>
+                {t.targetTrack}: <span className="text-aura-blue font-semibold">{targetTrack?.name || 'Vocal Track'}</span>
               </p>
             </div>
           </div>
@@ -179,7 +173,6 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-6 space-y-6">
-          {/* Recording Timer & Waveform Display */}
           <div className="h-44 bg-black/70 rounded-xl border border-surface-50/30 flex flex-col items-center justify-center relative overflow-hidden">
             {countdown !== null ? (
               <div className="text-6xl font-black text-aura-blue animate-pulse">
@@ -190,7 +183,7 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-aura-red animate-ping" />
                   <span className="text-xs font-mono tracking-widest text-aura-red uppercase font-bold">
-                    RECORDING LIVE (24-BIT / 48kHz)
+                    {t.liveRecordingNotice}
                   </span>
                 </div>
                 <span className="text-4xl font-mono font-bold text-white tracking-wider">
@@ -200,29 +193,28 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
             ) : recordedResult ? (
               <div className="flex flex-col items-center gap-2">
                 <span className="text-xs font-mono text-aura-green uppercase font-semibold">
-                  Recording Captured ({formatTime(recordedResult.duration)})
+                  {t.recordingCaptured} ({formatTime(recordedResult.duration)})
                 </span>
-                <span className="text-2xl font-mono text-white">Ready to Place on Track</span>
+                <span className="text-2xl font-mono text-white">{t.readyToPlace}</span>
               </div>
             ) : (
               <div className="text-center text-gray-400 space-y-1">
                 <Mic className="w-8 h-8 text-aura-blue/60 mx-auto mb-2 animate-bounce" />
-                <p className="text-xs">Select your mic, check input level, and hit RECORD</p>
+                <p className="text-xs">{t.micSetupHelp}</p>
               </div>
             )}
 
-            {/* Clipping Indicator alert */}
             {clipped && (
               <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 bg-aura-red/20 text-aura-red border border-aura-red/40 rounded text-xs font-bold animate-pulse">
-                <AlertTriangle className="w-3.5 h-3.5" /> PEAK CLIPPING
+                <AlertTriangle className="w-3.5 h-3.5" /> {t.peakClipping}
               </div>
             )}
           </div>
 
-          {/* Real-time Input VU Meter */}
+          {/* VU Meter */}
           <div className="space-y-1.5">
             <div className="flex justify-between text-[11px] font-mono text-gray-400">
-              <span>MIC INPUT LEVEL</span>
+              <span>{t.micInputLevel}</span>
               <span className={clipped ? 'text-aura-red font-bold' : 'text-gray-300'}>
                 {Math.round(meterDb)} dBFS
               </span>
@@ -237,12 +229,11 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
             </div>
           </div>
 
-          {/* Controls: Device Selector, Monitoring, Latency */}
+          {/* Controls */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-surface-100 p-4 rounded-xl border border-surface-50/30 text-xs">
-            {/* Mic Device Selector */}
             <div className="space-y-1">
               <label className="text-gray-400 font-mono text-[10px] uppercase">
-                Microphone Device
+                {t.microphoneDevice}
               </label>
               <select
                 value={selectedDeviceId}
@@ -257,11 +248,10 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
               </select>
             </div>
 
-            {/* Headphone Direct Monitoring */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="text-gray-400 font-mono text-[10px] uppercase flex items-center gap-1">
-                  <Headphones className="w-3 h-3 text-aura-purple" /> Headphone Monitoring
+                  <Headphones className="w-3 h-3 text-aura-purple" /> {t.headphoneMonitoring}
                 </label>
                 <input
                   type="checkbox"
@@ -271,14 +261,13 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                 />
               </div>
               <p className="text-[10px] text-gray-500">
-                Only enable when wearing headphones to avoid feedback loops!
+                {t.monitoringWarning}
               </p>
             </div>
 
-            {/* Latency Compensation */}
             <div className="col-span-1 md:col-span-2 space-y-1">
               <div className="flex justify-between text-[10px] font-mono text-gray-400">
-                <span>LATENCY COMPENSATION (ALIGN TO BEAT)</span>
+                <span>{t.latencyCompensation}</span>
                 <span className="text-aura-blue font-bold">{latencyMs} ms</span>
               </div>
               <input
@@ -294,13 +283,13 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
           </div>
         </div>
 
-        {/* Modal Footer / Action Buttons */}
+        {/* Modal Footer */}
         <div className="px-6 py-4 bg-surface-100 border-t border-surface-50/30 flex items-center justify-between">
           <button
             onClick={onClose}
             className="px-4 py-2 text-xs font-semibold text-gray-400 hover:text-white transition-colors"
           >
-            Cancel
+            {t.cancel}
           </button>
 
           <div className="flex items-center gap-3">
@@ -309,7 +298,7 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                 onClick={handleStopRecord}
                 className="flex items-center gap-2 px-5 py-2.5 bg-aura-red hover:bg-aura-red/90 text-white rounded-xl font-bold text-xs shadow-glow-red transition-all"
               >
-                <Square className="w-4 h-4 fill-current" /> STOP RECORDING
+                <Square className="w-4 h-4 fill-current" /> {t.stopRecording}
               </button>
             ) : recordedResult ? (
               <>
@@ -317,13 +306,13 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                   onClick={handleStartRecord}
                   className="flex items-center gap-1.5 px-3 py-2 bg-surface-50 hover:bg-surface-200 text-gray-300 rounded-xl text-xs font-medium border border-surface-50/50 transition-colors"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" /> Re-record
+                  <RotateCcw className="w-3.5 h-3.5" /> {t.reRecord}
                 </button>
                 <button
                   onClick={handleSave}
                   className="flex items-center gap-1.5 px-5 py-2.5 bg-aura-blue hover:bg-aura-blue/90 text-black rounded-xl font-bold text-xs shadow-glow transition-all"
                 >
-                  <Check className="w-4 h-4" /> Save & Insert Into Track
+                  <Check className="w-4 h-4" /> {t.saveAndInsert}
                 </button>
               </>
             ) : (
@@ -331,7 +320,7 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                 onClick={handleStartRecord}
                 className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-aura-red to-aura-purple text-white rounded-xl font-bold text-xs shadow-glow-red hover:opacity-95 transition-all"
               >
-                <Circle className="w-4 h-4 fill-current animate-pulse" /> START RECORDING
+                <Circle className="w-4 h-4 fill-current animate-pulse" /> {t.startRecording}
               </button>
             )}
           </div>

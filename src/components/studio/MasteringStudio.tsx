@@ -4,13 +4,8 @@ import React, { useState } from 'react';
 import {
   Disc3,
   Sparkles,
-  Zap,
-  Activity,
   CheckCircle2,
-  AlertTriangle,
   Play,
-  RotateCcw,
-  Check,
   ShieldCheck,
   ArrowRight,
 } from 'lucide-react';
@@ -18,6 +13,7 @@ import { AudioTrackItem, MasteringTarget } from '@/types';
 import { MASTERING_TARGETS } from '@/lib/ai/masteringEngine';
 import { renderOfflineMixdown } from '@/lib/audio/export';
 import { calculateLoudnessStats, MeteringResult } from '@/lib/audio/metering';
+import { useI18n } from '@/lib/i18n';
 
 interface MasteringStudioProps {
   tracks: AudioTrackItem[];
@@ -32,13 +28,23 @@ export const MasteringStudio: React.FC<MasteringStudioProps> = ({
   onPlayMasterPreview,
   onNavigateToExport,
 }) => {
+  const { t, language } = useI18n();
   const [selectedTarget, setSelectedTarget] = useState<MasteringTarget>(MASTERING_TARGETS[0]);
   const [isFinishing, setIsFinishing] = useState<boolean>(false);
   const [finishStep, setFinishStep] = useState<string>('');
   const [masteredBuffer, setMasteredBuffer] = useState<AudioBuffer | null>(null);
   const [loudnessStats, setLoudnessStats] = useState<MeteringResult | null>(null);
 
-  const steps = [
+  const stepsSK = [
+    'ANALÝZA VIACSTOPOVÉHO AUDIA',
+    'ČISTENIE VOKÁLNYCH FREKVENCIÍ',
+    'VYVÁŽENIE 808 SUB-BASU & BICÍCH',
+    'SPRACOVANIE STEREO ŠÍRKY',
+    'VÝPOČET INTEGRATED LUFS MASTRA',
+    'KONTROLA TRUE PEAK A DIGITAL CLIPPINGU',
+  ];
+
+  const stepsEN = [
     'ANALYZING MULTITRACK AUDIO',
     'CLEANING VOCAL FREQUENCIES',
     'BALANCING 808 BASS & PUNCH',
@@ -47,17 +53,17 @@ export const MasteringStudio: React.FC<MasteringStudioProps> = ({
     'FINAL TRUE PEAK LIMITING CHECK',
   ];
 
-  // Execute AI FINISH MY TRACK
+  const activeSteps = language === 'sk' ? stepsSK : stepsEN;
+
   const handleAiFinishTrack = async () => {
     setIsFinishing(true);
 
-    for (let i = 0; i < steps.length; i++) {
-      setFinishStep(steps[i]);
+    for (let i = 0; i < activeSteps.length; i++) {
+      setFinishStep(activeSteps[i]);
       await new Promise((r) => setTimeout(r, 450));
     }
 
     try {
-      // Real multitrack DSP mixdown & mastering render
       const totalSec = Math.max(10, projectDuration);
       const masterBuffer = await renderOfflineMixdown(
         tracks,
@@ -66,7 +72,6 @@ export const MasteringStudio: React.FC<MasteringStudioProps> = ({
         44100
       );
 
-      // Real ITU-R BS.1770 LUFS analysis
       const stats = calculateLoudnessStats(masterBuffer);
       setMasteredBuffer(masterBuffer);
       setLoudnessStats(stats);
@@ -80,17 +85,16 @@ export const MasteringStudio: React.FC<MasteringStudioProps> = ({
 
   return (
     <div className="flex-1 bg-surface-300 p-6 overflow-y-auto space-y-6">
-      {/* Top Banner: AI FINISH MY TRACK */}
       <div className="bg-gradient-to-r from-surface-200 via-surface-200 to-aura-purple/20 border border-aura-purple/40 p-6 rounded-2xl shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-2">
             <Disc3 className="w-6 h-6 text-aura-purple animate-spin-slow" />
             <h2 className="text-2xl font-black text-white tracking-wide">
-              AI FINISH MY TRACK
+              {t.masteringTitle}
             </h2>
           </div>
           <p className="text-xs text-gray-300 mt-1 max-w-xl leading-relaxed">
-            One-click master polish. Automatically inspects phase, clears mud, matches commercial Hip-Hop loudness standards, and prevents digital clipping.
+            {t.masteringDesc}
           </p>
         </div>
 
@@ -104,11 +108,10 @@ export const MasteringStudio: React.FC<MasteringStudioProps> = ({
           ) : (
             <Sparkles className="w-4 h-4" />
           )}
-          {isFinishing ? 'FINISHING TRACK...' : 'AI FINISH MY TRACK'}
+          {isFinishing ? t.finishingTrack : t.aiFinishBtn}
         </button>
       </div>
 
-      {/* Step by Step Progress Visualizer */}
       {isFinishing && (
         <div className="bg-surface-200 border border-surface-50/30 p-6 rounded-2xl space-y-4">
           <div className="flex items-center justify-between text-xs font-mono text-aura-blue font-bold">
@@ -117,9 +120,9 @@ export const MasteringStudio: React.FC<MasteringStudioProps> = ({
           </div>
 
           <div className="space-y-2">
-            {steps.map((step, idx) => {
+            {activeSteps.map((step, idx) => {
               const isCurrent = finishStep === step;
-              const isPast = steps.indexOf(finishStep) > idx;
+              const isPast = activeSteps.indexOf(finishStep) > idx;
 
               return (
                 <div
@@ -147,10 +150,10 @@ export const MasteringStudio: React.FC<MasteringStudioProps> = ({
         </div>
       )}
 
-      {/* Target Loudness Presets */}
+      {/* Target Standards */}
       <div className="space-y-3">
         <label className="text-xs font-mono text-gray-400 uppercase">
-          Mastering Target Standard
+          {t.targetStandardLabel}
         </label>
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {MASTERING_TARGETS.map((target) => (
@@ -175,29 +178,27 @@ export const MasteringStudio: React.FC<MasteringStudioProps> = ({
         </div>
       </div>
 
-      {/* Real Loudness & Metering Stats Report */}
       {loudnessStats && masteredBuffer && (
         <div className="bg-surface-200 border border-surface-50/30 rounded-2xl p-6 space-y-6">
           <div className="flex items-center justify-between border-b border-surface-50/20 pb-4">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-aura-green" />
               <h3 className="font-bold text-sm text-white">
-                Master Quality Assurance (EBU R128 / ITU-R BS.1770)
+                {t.masterQA}
               </h3>
             </div>
             <button
               onClick={() => onPlayMasterPreview(masteredBuffer)}
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-aura-blue text-black font-bold text-xs shadow-glow hover:bg-aura-blue/90 transition-all"
             >
-              <Play className="w-4 h-4 fill-current" /> PLAY MASTER PREVIEW
+              <Play className="w-4 h-4 fill-current" /> {t.playMasterPreview}
             </button>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-mono text-center">
-            {/* Integrated LUFS */}
             <div className="bg-surface-100 p-4 rounded-xl border border-surface-50/30">
               <span className="text-[10px] text-gray-400 block uppercase">
-                Integrated Loudness
+                {t.integratedLoudness}
               </span>
               <span className="text-2xl font-bold text-aura-blue">
                 {loudnessStats.integratedLUFS} LUFS
@@ -207,9 +208,8 @@ export const MasteringStudio: React.FC<MasteringStudioProps> = ({
               </span>
             </div>
 
-            {/* True Peak */}
             <div className="bg-surface-100 p-4 rounded-xl border border-surface-50/30">
-              <span className="text-[10px] text-gray-400 block uppercase">True Peak</span>
+              <span className="text-[10px] text-gray-400 block uppercase">{t.truePeak}</span>
               <span
                 className={`text-2xl font-bold ${
                   loudnessStats.isClipping ? 'text-aura-red' : 'text-aura-green'
@@ -220,18 +220,16 @@ export const MasteringStudio: React.FC<MasteringStudioProps> = ({
               <span className="text-[10px] text-gray-400 block mt-1">Ceiling: -0.3 dBFS</span>
             </div>
 
-            {/* Dynamic Range (LRA) */}
             <div className="bg-surface-100 p-4 rounded-xl border border-surface-50/30">
-              <span className="text-[10px] text-gray-400 block uppercase">Loudness Range (LRA)</span>
+              <span className="text-[10px] text-gray-400 block uppercase">{t.loudnessRange}</span>
               <span className="text-2xl font-bold text-aura-gold">
                 {loudnessStats.dynamicRangeLra} LU
               </span>
               <span className="text-[10px] text-gray-400 block mt-1">Punchy Hip-Hop Dynamic</span>
             </div>
 
-            {/* Clipping Safety Check */}
             <div className="bg-surface-100 p-4 rounded-xl border border-surface-50/30">
-              <span className="text-[10px] text-gray-400 block uppercase">Clipping Status</span>
+              <span className="text-[10px] text-gray-400 block uppercase">{t.clippingStatus}</span>
               <span
                 className={`text-2xl font-bold ${
                   loudnessStats.isClipping ? 'text-aura-red' : 'text-aura-green'
@@ -250,7 +248,7 @@ export const MasteringStudio: React.FC<MasteringStudioProps> = ({
               onClick={onNavigateToExport}
               className="flex items-center gap-2 px-6 py-3 rounded-xl bg-aura-green hover:bg-aura-green/90 text-black font-extrabold text-xs shadow-glow transition-all"
             >
-              CONTINUE TO EXPORT STUDIO <ArrowRight className="w-4 h-4" />
+              {t.continueToExport} <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>

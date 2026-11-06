@@ -5,13 +5,13 @@ import {
   Download,
   FileAudio,
   Layers,
-  Sparkles,
-  CheckCircle2,
   HardDrive,
   FileCode,
+  CheckCircle2,
 } from 'lucide-react';
 import { AudioTrackItem, ProjectData } from '@/types';
 import { renderOfflineMixdown, audioBufferToWav } from '@/lib/audio/export';
+import { useI18n } from '@/lib/i18n';
 
 interface ExportStudioProps {
   project: ProjectData;
@@ -19,12 +19,12 @@ interface ExportStudioProps {
 }
 
 export const ExportStudio: React.FC<ExportStudioProps> = ({ project, tracks }) => {
+  const { t, language } = useI18n();
   const [selectedFormat, setSelectedFormat] = useState<'WAV' | 'MP3'>('WAV');
   const [selectedBitDepth, setSelectedBitDepth] = useState<16 | 24 | 32>(24);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [exportMessage, setExportMessage] = useState<string>('');
 
-  // Helper to trigger browser download
   const triggerDownload = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -36,10 +36,9 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ project, tracks }) =
     URL.revokeObjectURL(url);
   };
 
-  // Export Full Master
   const handleExportFullMaster = async () => {
     setIsExporting(true);
-    setExportMessage('Rendering Multitrack Master...');
+    setExportMessage(language === 'sk' ? 'Renderujem viacstopový finálny master...' : 'Rendering Multitrack Master...');
 
     try {
       const totalSec = Math.max(10, project.duration || 30);
@@ -51,7 +50,7 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ project, tracks }) =
       const filename = `${project.title.replace(/\s+/g, '_')}_Master_${selectedBitDepth}bit.wav`;
       triggerDownload(blob, filename);
 
-      setExportMessage(`Export Complete: ${filename}`);
+      setExportMessage(language === 'sk' ? `Export úspešný: ${filename}` : `Export Complete: ${filename}`);
     } catch (err: any) {
       console.error('Export failed:', err);
       setExportMessage(`Export error: ${err.message}`);
@@ -60,13 +59,12 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ project, tracks }) =
     }
   };
 
-  // Export Acapella (all vocals only)
   const handleExportAcapella = async () => {
     setIsExporting(true);
-    setExportMessage('Rendering Acapella Stems...');
+    setExportMessage(language === 'sk' ? 'Renderujem Acapella stopy...' : 'Rendering Acapella Stems...');
 
     try {
-      const vocalTracks = tracks.filter((t) => t.layerType !== 'BEAT' && t.layerType !== 'INSTRUMENTAL');
+      const vocalTracks = tracks.filter((tItem) => tItem.layerType !== 'BEAT' && tItem.layerType !== 'INSTRUMENTAL');
       const totalSec = Math.max(10, project.duration || 30);
       const acapellaBuffer = await renderOfflineMixdown(vocalTracks, totalSec, undefined, 44100);
 
@@ -76,7 +74,7 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ project, tracks }) =
       const filename = `${project.title.replace(/\s+/g, '_')}_Acapella_${selectedBitDepth}bit.wav`;
       triggerDownload(blob, filename);
 
-      setExportMessage(`Acapella Export Complete!`);
+      setExportMessage(language === 'sk' ? 'Acapella export dokončený!' : 'Acapella Export Complete!');
     } catch (err: any) {
       setExportMessage(`Export error: ${err.message}`);
     } finally {
@@ -84,13 +82,12 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ project, tracks }) =
     }
   };
 
-  // Export Instrumental (beat & instruments only)
   const handleExportInstrumental = async () => {
     setIsExporting(true);
-    setExportMessage('Rendering Instrumental...');
+    setExportMessage(language === 'sk' ? 'Renderujem Instrumental beat...' : 'Rendering Instrumental...');
 
     try {
-      const beatTracks = tracks.filter((t) => t.layerType === 'BEAT' || t.layerType === 'INSTRUMENTAL');
+      const beatTracks = tracks.filter((tItem) => tItem.layerType === 'BEAT' || tItem.layerType === 'INSTRUMENTAL');
       const totalSec = Math.max(10, project.duration || 30);
       const instrumentalBuffer = await renderOfflineMixdown(beatTracks, totalSec, undefined, 44100);
 
@@ -100,7 +97,7 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ project, tracks }) =
       const filename = `${project.title.replace(/\s+/g, '_')}_Instrumental_${selectedBitDepth}bit.wav`;
       triggerDownload(blob, filename);
 
-      setExportMessage(`Instrumental Export Complete!`);
+      setExportMessage(language === 'sk' ? 'Instrumental export dokončený!' : 'Instrumental Export Complete!');
     } catch (err: any) {
       setExportMessage(`Export error: ${err.message}`);
     } finally {
@@ -108,10 +105,9 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ project, tracks }) =
     }
   };
 
-  // Export Single Stem
   const handleExportSingleStem = async (track: AudioTrackItem) => {
     if (!track.audioBuffer) {
-      alert(`Stopa ${track.name} neobsahuje zvuk.`);
+      alert(language === 'sk' ? `Stopa ${track.name} neobsahuje zvuk.` : `Track ${track.name} contains no audio.`);
       return;
     }
 
@@ -125,7 +121,6 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ project, tracks }) =
     }
   };
 
-  // Export Complete Project JSON
   const handleExportProjectJSON = () => {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(project, null, 2));
     const a = document.createElement('a');
@@ -138,34 +133,31 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ project, tracks }) =
 
   return (
     <div className="flex-1 bg-surface-300 p-6 overflow-y-auto space-y-6">
-      {/* Header */}
       <div className="bg-surface-200 border border-surface-50/30 p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <Download className="w-5 h-5 text-aura-blue" />
             <h2 className="text-xl font-bold text-white tracking-wide">
-              Export Studio & Stems
+              {t.exportStudioTitle}
             </h2>
           </div>
           <p className="text-xs text-gray-400 mt-1">
-            Export release-ready uncompressed audio files with preserved multitrack phase alignment.
+            {t.exportStudioDesc}
           </p>
         </div>
 
-        {/* Project JSON Backup */}
         <button
           onClick={handleExportProjectJSON}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-100 hover:bg-surface-50 text-xs text-gray-300 border border-surface-50/30 transition-colors"
         >
-          <FileCode className="w-3.5 h-3.5 text-aura-gold" /> Backup Project (JSON)
+          <FileCode className="w-3.5 h-3.5 text-aura-gold" /> {t.backupJson}
         </button>
       </div>
 
-      {/* Quality & Format Selection */}
+      {/* Quality & Format */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Format Selection */}
         <div className="bg-surface-200 border border-surface-50/30 p-4 rounded-xl space-y-3">
-          <label className="text-[10px] font-mono text-gray-400 uppercase">Audio Format</label>
+          <label className="text-[10px] font-mono text-gray-400 uppercase">{t.audioFormat}</label>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <button
               onClick={() => setSelectedFormat('WAV')}
@@ -175,9 +167,9 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ project, tracks }) =
                   : 'bg-surface-100 text-gray-400 border-surface-50/20 hover:text-white'
               }`}
             >
-              WAV (Lossless PCM)
+              {t.formatWav}
               <span className="block text-[10px] text-gray-400 font-normal">
-                Standard industry mastering format
+                {t.formatWavDesc}
               </span>
             </button>
 
@@ -189,17 +181,16 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ project, tracks }) =
                   : 'bg-surface-100 text-gray-400 border-surface-50/20 hover:text-white'
               }`}
             >
-              MP3 (320 kbps)
+              {t.formatMp3}
               <span className="block text-[10px] text-gray-400 font-normal">
-                High-bitrate distribution preview
+                {t.formatMp3Desc}
               </span>
             </button>
           </div>
         </div>
 
-        {/* Bit Depth */}
         <div className="bg-surface-200 border border-surface-50/30 p-4 rounded-xl space-y-3">
-          <label className="text-[10px] font-mono text-gray-400 uppercase">WAV Bit Depth</label>
+          <label className="text-[10px] font-mono text-gray-400 uppercase">{t.bitDepthLabel}</label>
           <div className="grid grid-cols-3 gap-2 text-xs font-mono">
             {[16, 24, 32].map((depth) => (
               <button
@@ -218,73 +209,64 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ project, tracks }) =
         </div>
       </div>
 
-      {/* Main Mix Export Buttons */}
+      {/* Main Mix Export */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Full Track */}
         <div className="bg-surface-200 border border-surface-50/30 p-5 rounded-2xl flex flex-col justify-between space-y-4">
           <div>
             <div className="w-9 h-9 rounded-xl bg-aura-blue/20 text-aura-blue flex items-center justify-center mb-2">
               <FileAudio className="w-5 h-5" />
             </div>
-            <h3 className="font-bold text-sm text-white">Full Master Track</h3>
-            <p className="text-xs text-gray-400 mt-1">
-              Complete song with all vocal layers, beat, DSP processing, and master limiting.
-            </p>
+            <h3 className="font-bold text-sm text-white">{t.fullMasterTrack}</h3>
+            <p className="text-xs text-gray-400 mt-1">{t.fullMasterTrackDesc}</p>
           </div>
           <button
             onClick={handleExportFullMaster}
             disabled={isExporting}
             className="w-full py-2.5 rounded-xl bg-aura-blue hover:bg-aura-blue/90 text-black font-bold text-xs shadow-glow transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            <Download className="w-3.5 h-3.5" /> EXPORT FULL MASTER
+            <Download className="w-3.5 h-3.5" /> {t.exportFullMasterBtn}
           </button>
         </div>
 
-        {/* Acapella */}
         <div className="bg-surface-200 border border-surface-50/30 p-5 rounded-2xl flex flex-col justify-between space-y-4">
           <div>
             <div className="w-9 h-9 rounded-xl bg-aura-purple/20 text-aura-purple flex items-center justify-center mb-2">
               <Layers className="w-5 h-5" />
             </div>
-            <h3 className="font-bold text-sm text-white">Acapella (All Vocals)</h3>
-            <p className="text-xs text-gray-400 mt-1">
-              Main vocal, doubles, ad-libs, and harmonies with reverb/delays. Zero beat.
-            </p>
+            <h3 className="font-bold text-sm text-white">{t.acapellaTitle}</h3>
+            <p className="text-xs text-gray-400 mt-1">{t.acapellaDesc}</p>
           </div>
           <button
             onClick={handleExportAcapella}
             disabled={isExporting}
             className="w-full py-2.5 rounded-xl bg-aura-purple/20 hover:bg-aura-purple/30 text-aura-purple border border-aura-purple/40 font-bold text-xs shadow-glow-purple transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            <Download className="w-3.5 h-3.5" /> EXPORT ACAPELLA
+            <Download className="w-3.5 h-3.5" /> {t.exportAcapellaBtn}
           </button>
         </div>
 
-        {/* Instrumental */}
         <div className="bg-surface-200 border border-surface-50/30 p-5 rounded-2xl flex flex-col justify-between space-y-4">
           <div>
             <div className="w-9 h-9 rounded-xl bg-aura-red/20 text-aura-red flex items-center justify-center mb-2">
               <HardDrive className="w-5 h-5" />
             </div>
-            <h3 className="font-bold text-sm text-white">Instrumental Beat</h3>
-            <p className="text-xs text-gray-400 mt-1">
-              Pure instrumental track with 808 bass, drums, and melody. Zero vocal tracks.
-            </p>
+            <h3 className="font-bold text-sm text-white">{t.instrumentalTitle}</h3>
+            <p className="text-xs text-gray-400 mt-1">{t.instrumentalDesc}</p>
           </div>
           <button
             onClick={handleExportInstrumental}
             disabled={isExporting}
             className="w-full py-2.5 rounded-xl bg-aura-red/20 hover:bg-aura-red/30 text-aura-red border border-aura-red/40 font-bold text-xs shadow-glow-red transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            <Download className="w-3.5 h-3.5" /> EXPORT INSTRUMENTAL
+            <Download className="w-3.5 h-3.5" /> {t.exportInstrumentalBtn}
           </button>
         </div>
       </div>
 
-      {/* Individual Stems Table */}
+      {/* Stems Table */}
       <div className="bg-surface-200 border border-surface-50/30 rounded-2xl p-5 space-y-4">
         <h3 className="font-bold text-sm text-white flex items-center gap-2 font-mono">
-          <Layers className="w-4 h-4 text-aura-blue" /> Isolated Track Stems
+          <Layers className="w-4 h-4 text-aura-blue" /> {t.isolatedStemsTitle}
         </h3>
 
         <div className="divide-y divide-surface-50/20">
@@ -308,14 +290,13 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ project, tracks }) =
                 onClick={() => handleExportSingleStem(track)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-100 hover:bg-surface-50 text-gray-300 hover:text-white border border-surface-50/40 text-[11px] font-mono transition-colors"
               >
-                <Download className="w-3 h-3 text-aura-blue" /> Download Stem (.wav)
+                <Download className="w-3 h-3 text-aura-blue" /> {t.downloadStem}
               </button>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Status banner */}
       {exportMessage && (
         <div className="p-3 bg-surface-200 border border-aura-green/30 rounded-xl text-xs font-mono text-aura-green flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4" /> {exportMessage}

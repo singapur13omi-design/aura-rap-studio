@@ -4,18 +4,17 @@ import React, { useRef, useState, useEffect } from 'react';
 import {
   Plus,
   Volume2,
-  VolumeX,
   Sliders,
   Trash2,
   Upload,
   ZoomIn,
   ZoomOut,
   Scissors,
-  Layers,
   Mic,
 } from 'lucide-react';
 import { AudioTrackItem, LayerType } from '@/types';
-import { formatTime, formatBarsBeats } from '@/lib/utils';
+import { formatTime } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n';
 
 interface MultitrackTimelineProps {
   tracks: AudioTrackItem[];
@@ -44,6 +43,7 @@ export const MultitrackTimeline: React.FC<MultitrackTimelineProps> = ({
   onRecordTrack,
   onImportAudio,
 }) => {
+  const { t } = useI18n();
   const [zoomLevel, setZoomLevel] = useState<number>(40); // pixels per second
   const [draggingTrackId, setDraggingTrackId] = useState<string | null>(null);
   const [dragStartX, setDragStartX] = useState<number>(0);
@@ -117,17 +117,14 @@ export const MultitrackTimeline: React.FC<MultitrackTimelineProps> = ({
     const splitPoint = currentTime - track.startTime;
     if (splitPoint > 0.5 && track.duration && splitPoint < track.duration - 0.5) {
       onUpdateTrack(track.id, { duration: splitPoint });
-      // Create second split segment as a new track
       onAddTrack(track.layerType);
     }
   };
 
-  // Playhead position in px
   const playheadPx = currentTime * zoomLevel;
 
   return (
     <div className="flex-1 flex flex-col bg-surface-300 overflow-hidden select-none">
-      {/* Hidden file input */}
       <input
         type="file"
         ref={fileInputRef}
@@ -143,13 +140,13 @@ export const MultitrackTimeline: React.FC<MultitrackTimelineProps> = ({
             onClick={() => onAddTrack('MAIN_VOCAL')}
             className="flex items-center gap-1.5 px-3 py-1 rounded bg-aura-blue/20 hover:bg-aura-blue/30 text-aura-blue border border-aura-blue/30 font-medium transition-colors"
           >
-            <Plus className="w-3.5 h-3.5" /> Add Track
+            <Plus className="w-3.5 h-3.5" /> {t.addTrack}
           </button>
 
           <span className="text-surface-50">|</span>
 
           <span className="font-mono text-[11px] text-gray-400">
-            {tracks.length} {tracks.length === 1 ? 'Track' : 'Tracks'}
+            {tracks.length} {t.tracksCount}
           </span>
         </div>
 
@@ -158,7 +155,7 @@ export const MultitrackTimeline: React.FC<MultitrackTimelineProps> = ({
           <button
             onClick={() => setZoomLevel((z) => Math.max(15, z - 10))}
             className="p-1 hover:text-white"
-            title="Zoom Out"
+            title={t.zoomOut}
           >
             <ZoomOut className="w-3.5 h-3.5" />
           </button>
@@ -166,7 +163,7 @@ export const MultitrackTimeline: React.FC<MultitrackTimelineProps> = ({
           <button
             onClick={() => setZoomLevel((z) => Math.min(120, z + 15))}
             className="p-1 hover:text-white"
-            title="Zoom In"
+            title={t.zoomIn}
           >
             <ZoomIn className="w-3.5 h-3.5" />
           </button>
@@ -175,21 +172,19 @@ export const MultitrackTimeline: React.FC<MultitrackTimelineProps> = ({
 
       {/* Main Multitrack Canvas Area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left: Fixed Track Headers (Controls) */}
+        {/* Left: Track Controls */}
         <div className="w-56 md:w-72 bg-surface-200 border-r border-surface-50/30 flex flex-col shrink-0 overflow-y-auto">
-          {/* Header Spacer matching ruler height */}
           <div className="h-8 bg-surface-100 border-b border-surface-50/30 px-3 flex items-center text-[10px] font-mono text-gray-400 uppercase tracking-wider">
-            Audio Tracks
+            {t.yourProjects}
           </div>
 
-          {/* Track Headers */}
           <div className="divide-y divide-surface-50/20">
             {tracks.map((track) => (
               <div
                 key={track.id}
                 className="h-24 p-2.5 flex flex-col justify-between bg-surface-200/50 hover:bg-surface-200 transition-colors"
               >
-                {/* Track Title & Layer Tag */}
+                {/* Track Title */}
                 <div className="flex items-center justify-between gap-1">
                   <div className="flex items-center gap-2 truncate">
                     <div
@@ -204,18 +199,17 @@ export const MultitrackTimeline: React.FC<MultitrackTimelineProps> = ({
                     />
                   </div>
 
-                  {/* Actions */}
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => onOpenFX(track.id)}
-                      title="Open DSP FX Rack"
+                      title={t.dspFxRack}
                       className="p-1 text-gray-400 hover:text-aura-blue hover:bg-surface-100 rounded"
                     >
                       <Sliders className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => onDeleteTrack(track.id)}
-                      title="Delete Track"
+                      title={t.deleteTrack}
                       className="p-1 text-gray-400 hover:text-aura-red hover:bg-surface-100 rounded"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -223,10 +217,9 @@ export const MultitrackTimeline: React.FC<MultitrackTimelineProps> = ({
                   </div>
                 </div>
 
-                {/* Track Controls: Mute, Solo, Record, Volume, Pan */}
+                {/* Track Controls */}
                 <div className="flex items-center justify-between gap-2 text-xs">
                   <div className="flex items-center gap-1 font-mono text-[10px]">
-                    {/* Mute button */}
                     <button
                       onClick={() => onUpdateTrack(track.id, { muted: !track.muted })}
                       className={`px-1.5 py-0.5 rounded font-bold ${
@@ -235,10 +228,9 @@ export const MultitrackTimeline: React.FC<MultitrackTimelineProps> = ({
                           : 'bg-surface-100 text-gray-400 hover:text-white'
                       }`}
                     >
-                      M
+                      {t.mute}
                     </button>
 
-                    {/* Solo button */}
                     <button
                       onClick={() => onUpdateTrack(track.id, { soloed: !track.soloed })}
                       className={`px-1.5 py-0.5 rounded font-bold ${
@@ -247,29 +239,26 @@ export const MultitrackTimeline: React.FC<MultitrackTimelineProps> = ({
                           : 'bg-surface-100 text-gray-400 hover:text-white'
                       }`}
                     >
-                      S
+                      {t.solo}
                     </button>
 
-                    {/* Record Arm button */}
                     <button
                       onClick={() => onRecordTrack(track.id)}
-                      title="Record vocal onto this track"
+                      title={t.recArm}
                       className="p-1 rounded bg-surface-100 text-gray-400 hover:text-aura-red hover:bg-aura-red/20 transition-colors"
                     >
                       <Mic className="w-3 h-3" />
                     </button>
 
-                    {/* Import file button */}
                     <button
                       onClick={() => triggerImport(track.id)}
-                      title="Import audio file (WAV, MP3, etc.)"
+                      title={t.importAudio}
                       className="p-1 rounded bg-surface-100 text-gray-400 hover:text-aura-blue hover:bg-aura-blue/20 transition-colors"
                     >
                       <Upload className="w-3 h-3" />
                     </button>
                   </div>
 
-                  {/* Volume Slider */}
                   <div className="flex items-center gap-1 flex-1 max-w-[80px]">
                     <Volume2 className="w-3 h-3 text-gray-400" />
                     <input
@@ -286,9 +275,9 @@ export const MultitrackTimeline: React.FC<MultitrackTimelineProps> = ({
                   </div>
                 </div>
 
-                {/* Pan slider */}
+                {/* Pan */}
                 <div className="flex items-center justify-between text-[10px] font-mono text-gray-400">
-                  <span>PAN</span>
+                  <span>{t.pan}</span>
                   <input
                     type="range"
                     min="-1"
@@ -313,18 +302,16 @@ export const MultitrackTimeline: React.FC<MultitrackTimelineProps> = ({
           </div>
         </div>
 
-        {/* Right: Scrollable Timeline Lanes with Playhead */}
+        {/* Right: Timeline Lanes */}
         <div
           ref={timelineContainerRef}
           className="flex-1 overflow-x-auto overflow-y-auto relative bg-[#090a0e]"
         >
-          {/* Timeline Ruler */}
           <div
             onClick={handleRulerClick}
             className="h-8 bg-surface-200 border-b border-surface-50/40 relative cursor-pointer sticky top-0 z-20"
             style={{ width: `${timelinePixelWidth}px` }}
           >
-            {/* Second & Bar Ticks */}
             {Array.from({ length: Math.ceil(totalTimelineDuration) }).map((_, sec) => {
               const x = sec * zoomLevel;
               const isBar = sec % 2 === 0;
@@ -339,7 +326,6 @@ export const MultitrackTimeline: React.FC<MultitrackTimelineProps> = ({
               );
             })}
 
-            {/* Playhead marker pin */}
             <div
               className="absolute top-0 bottom-0 w-3 -ml-1.5 z-30 pointer-events-none flex flex-col items-center"
               style={{ left: `${playheadPx}px` }}
@@ -348,18 +334,15 @@ export const MultitrackTimeline: React.FC<MultitrackTimelineProps> = ({
             </div>
           </div>
 
-          {/* Tracks Area */}
           <div
             className="relative divide-y divide-surface-50/20"
             style={{ width: `${timelinePixelWidth}px` }}
           >
-            {/* Playhead vertical line passing through all tracks */}
             <div
               className="absolute top-0 bottom-0 w-0.5 bg-aura-blue z-20 pointer-events-none shadow-glow"
               style={{ left: `${playheadPx}px` }}
             />
 
-            {/* Individual Track Lanes */}
             {tracks.map((track) => {
               const clipStartPx = (track.startTime || 0) * zoomLevel;
               const clipWidthPx = Math.max(
@@ -372,7 +355,6 @@ export const MultitrackTimeline: React.FC<MultitrackTimelineProps> = ({
                   key={track.id}
                   className="h-24 relative bg-surface-300/40 border-b border-surface-50/10"
                 >
-                  {/* Audio Clip Box */}
                   <div
                     onMouseDown={(e) => handleClipMouseDown(track, e)}
                     className="absolute top-2 bottom-2 rounded-lg border flex flex-col justify-between overflow-hidden cursor-move transition-shadow"
@@ -383,7 +365,6 @@ export const MultitrackTimeline: React.FC<MultitrackTimelineProps> = ({
                       borderColor: `${track.color}60`,
                     }}
                   >
-                    {/* Clip Top Bar */}
                     <div
                       className="px-2 py-0.5 text-[10px] font-mono flex items-center justify-between text-white font-medium"
                       style={{ backgroundColor: `${track.color}40` }}
@@ -394,20 +375,18 @@ export const MultitrackTimeline: React.FC<MultitrackTimelineProps> = ({
                           e.stopPropagation();
                           splitClipAtPlayhead(track);
                         }}
-                        title="Split clip at playhead"
+                        title={t.splitClip}
                         className="hover:text-aura-blue"
                       >
                         <Scissors className="w-2.5 h-2.5" />
                       </button>
                     </div>
 
-                    {/* Waveform Drawing Canvas / Visualizer */}
                     <div className="flex-1 flex items-center justify-center px-1 overflow-hidden">
                       {track.audioBuffer ? (
                         <div className="w-full h-12 flex items-center justify-around gap-0.5 opacity-80">
                           {Array.from({ length: Math.min(80, Math.floor(clipWidthPx / 4)) }).map(
                             (_, barIdx) => {
-                              // Pseudo-peaks derived from buffer or waveform data
                               const height = Math.min(
                                 100,
                                 Math.max(15, ((barIdx * 37) % 85) + 15)
@@ -427,12 +406,11 @@ export const MultitrackTimeline: React.FC<MultitrackTimelineProps> = ({
                         </div>
                       ) : (
                         <div className="text-[10px] font-mono text-gray-500 flex items-center gap-1">
-                          <span>Empty track – Click REC or Upload</span>
+                          <span>{t.emptyTrackHelp}</span>
                         </div>
                       )}
                     </div>
 
-                    {/* Clip Duration */}
                     <div className="px-2 py-0.5 text-[9px] font-mono text-gray-400 flex justify-between bg-black/30">
                       <span>{formatTime(track.startTime || 0)}</span>
                       <span>
