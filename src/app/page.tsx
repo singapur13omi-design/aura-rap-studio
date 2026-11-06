@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
+import { Sparkles, Crown } from 'lucide-react';
 import { StudioHeader } from '@/components/studio/StudioHeader';
 import { StudioSidebar, StudioTab } from '@/components/studio/StudioSidebar';
 import { MultitrackTimeline } from '@/components/studio/MultitrackTimeline';
@@ -15,6 +17,8 @@ import { BeatLibrary } from '@/components/studio/BeatLibrary';
 import { VoiceProfileSection } from '@/components/studio/VoiceProfileSection';
 import { AiMusicAssistant } from '@/components/studio/AiMusicAssistant';
 import { DashboardView } from '@/components/studio/DashboardView';
+import { AuthModal } from '@/components/auth/AuthModal';
+import { PricingModal } from '@/components/pricing/PricingModal';
 
 import { MultitrackAudioEngine } from '@/lib/audio/engine';
 import { generateHipHopBeat } from '@/lib/audio/synthesizer';
@@ -40,6 +44,22 @@ function AuraRapStudioContent() {
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [masterPeakDb, setMasterPeakDb] = useState<number>(-60);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  // Auth & Subscription
+  const { data: session } = useSession();
+  const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
+  const [pricingModalOpen, setPricingModalOpen] = useState<boolean>(false);
+  const [upgradeSuccessToast, setUpgradeSuccessToast] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('upgraded') === 'true') {
+        setUpgradeSuccessToast(true);
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, []);
 
   // Modals & Drawers
   const [recordingModalOpen, setRecordingModalOpen] = useState<boolean>(false);
@@ -178,6 +198,8 @@ function AuraRapStudioContent() {
         setProjects((prev) => [newProj, ...prev]);
         setCurrentProject(newProj);
         setCurrentTab('STUDIO');
+      } else if (resData.requiresUpgrade) {
+        setPricingModalOpen(true);
       }
     } catch (err) {
       console.error(err);
@@ -526,7 +548,26 @@ function AuraRapStudioContent() {
         }
         onToggleAiAssistant={() => setAiAssistantOpen((v) => !v)}
         onSaveProject={handleSaveProject}
+        onOpenPricing={() => setPricingModalOpen(true)}
+        onOpenAuth={() => setAuthModalOpen(true)}
       />
+
+      {upgradeSuccessToast && (
+        <div className="bg-gradient-to-r from-emerald-600 via-primary to-purple-600 text-black px-4 py-2 text-center text-xs font-black tracking-wide flex items-center justify-center gap-2 shadow-lg z-40 animate-fade-in">
+          <Sparkles className="w-4 h-4 fill-current animate-spin" />
+          <span>
+            {language === 'sk'
+              ? '🎉 PLATBA ÚSPEŠNÁ! Tvoj účet bol povýšený na PRO. Všetky rapové funkcie a neobmedzený export sú odomknuté!'
+              : '🎉 PAYMENT SUCCESSFUL! Your account is now PRO. All studio features and unlimited exports unlocked!'}
+          </span>
+          <button
+            onClick={() => setUpgradeSuccessToast(false)}
+            className="ml-3 px-2 py-0.5 rounded bg-black/20 hover:bg-black/40 text-black font-extrabold text-[10px]"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className="flex-1 flex overflow-hidden">
         <StudioSidebar currentTab={currentTab} onSelectTab={setCurrentTab} />
@@ -538,6 +579,7 @@ function AuraRapStudioContent() {
             onCreateProject={handleCreateProject}
             onDuplicateProject={handleDuplicateProject}
             onDeleteProject={handleDeleteProject}
+            onOpenPricing={() => setPricingModalOpen(true)}
           />
         )}
 
@@ -666,6 +708,19 @@ function AuraRapStudioContent() {
           onApplyAssistantAction={handleApplyAssistantAction}
         />
       )}
+
+      {/* Authentication Dialog */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+      />
+
+      {/* Subscription & Pricing Modal */}
+      <PricingModal
+        isOpen={pricingModalOpen}
+        onClose={() => setPricingModalOpen(false)}
+        onOpenAuth={() => setAuthModalOpen(true)}
+      />
     </div>
   );
 }

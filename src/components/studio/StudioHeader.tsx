@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 import {
   Play,
   Pause,
@@ -11,6 +12,13 @@ import {
   Sparkles,
   Save,
   Globe,
+  User as UserIcon,
+  LogIn,
+  LogOut,
+  Crown,
+  Zap,
+  CreditCard,
+  ChevronDown,
 } from 'lucide-react';
 import { formatTime, formatBarsBeats } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
@@ -35,6 +43,8 @@ interface StudioHeaderProps {
   onToggleMetronome: () => void;
   onToggleAiAssistant: () => void;
   onSaveProject: () => void;
+  onOpenPricing?: () => void;
+  onOpenAuth?: () => void;
 }
 
 export const StudioHeader: React.FC<StudioHeaderProps> = ({
@@ -57,8 +67,15 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
   onToggleMetronome,
   onToggleAiAssistant,
   onSaveProject,
+  onOpenPricing,
+  onOpenAuth,
 }) => {
+  const { data: session } = useSession();
   const { language, setLanguage, t } = useI18n();
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+
+  const plan = (session?.user as any)?.plan || 'FREE';
+  const isSubscribed = (session?.user as any)?.subscriptionStatus === 'ACTIVE';
 
   // Metronome visual pulse calculation
   const secondsPerBeat = 60 / bpm;
@@ -69,7 +86,7 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
   const isClipping = masterPeakDb >= -0.3;
 
   return (
-    <header className="h-16 bg-surface-200 border-b border-surface-50/20 px-3 md:px-4 flex items-center justify-between select-none z-30">
+    <header className="h-16 bg-surface-200 border-b border-surface-50/20 px-3 md:px-4 flex items-center justify-between select-none z-30 relative">
       {/* Left: Project title & save indicator */}
       <div className="flex items-center gap-2 md:gap-3">
         <div className="flex items-center gap-2">
@@ -93,83 +110,93 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
         </button>
       </div>
 
-      {/* Center: Main Transport Controls */}
-      <div className="flex items-center gap-1.5 md:gap-3 bg-surface-300/80 px-2 sm:px-3 py-1.5 rounded-xl border border-surface-50/30">
-        {/* Playhead Stop / Return */}
-        <button
-          onClick={onStop}
-          title={t.stopRewind}
-          className="p-1.5 sm:p-2 rounded-lg text-gray-400 hover:text-white hover:bg-surface-100 transition-colors"
-        >
-          <Square className="w-3.5 sm:w-4 h-3.5 sm:h-4 fill-current" />
-        </button>
+      {/* Center: Main Transport & Counter Controls */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Playback buttons */}
+        <div className="flex items-center bg-surface-300 rounded-lg p-1 border border-surface-50/30 gap-1">
+          <button
+            onClick={onStop}
+            title={t.stopRewind}
+            className="p-1.5 rounded-md hover:bg-surface-100 text-gray-400 hover:text-white transition-colors"
+          >
+            <Square className="w-4 h-4 fill-current" />
+          </button>
 
-        {/* Play / Pause Toggle */}
-        <button
-          onClick={isPlaying ? onPause : onPlay}
-          title={isPlaying ? t.pause : t.play}
-          className="p-2 sm:p-2.5 rounded-lg bg-aura-blue/20 text-aura-blue hover:bg-aura-blue/30 border border-aura-blue/40 transition-all shadow-glow"
-        >
           {isPlaying ? (
-            <Pause className="w-4 sm:w-5 h-4 sm:h-5 fill-current" />
+            <button
+              onClick={onPause}
+              title={t.pause}
+              className="p-1.5 rounded-md bg-surface-50 text-aura-blue hover:brightness-110 transition-colors"
+            >
+              <Pause className="w-4 h-4 fill-current" />
+            </button>
           ) : (
-            <Play className="w-4 sm:w-5 h-4 sm:h-5 fill-current ml-0.5" />
+            <button
+              onClick={onPlay}
+              title={t.play}
+              className="p-1.5 rounded-md bg-aura-blue text-black hover:brightness-110 transition-colors shadow-glow"
+            >
+              <Play className="w-4 h-4 fill-current ml-0.5" />
+            </button>
           )}
-        </button>
-
-        {/* Record Arm Button */}
-        <button
-          onClick={onRecordClick}
-          title={t.recVocal}
-          className="p-1.5 sm:p-2 rounded-lg text-aura-red hover:bg-aura-red/20 border border-aura-red/30 transition-colors flex items-center gap-1.5 px-2.5 sm:px-3"
-        >
-          <Circle className="w-3.5 sm:w-4 h-3.5 sm:h-4 fill-current animate-pulse" />
-          <span className="text-xs font-semibold hidden md:inline">{t.recVocal}</span>
-        </button>
-
-        {/* Time & Bar Display */}
-        <div className="flex flex-col items-center px-1.5 sm:px-2 py-0.5 bg-black/50 rounded border border-surface-50/40 font-mono text-center">
-          <span className="text-xs md:text-sm text-white font-bold tracking-wider">
-            {formatTime(currentTime)}
-          </span>
-          <span className="text-[10px] text-gray-400">
-            {t.bar} {formatBarsBeats(currentTime, bpm)}
-          </span>
-        </div>
-
-        {/* BPM & Metronome */}
-        <div className="flex items-center gap-1.5 sm:gap-2 pl-1 border-l border-surface-50/40">
-          <div className="flex items-center gap-1">
-            <span className="text-[10px] font-mono text-gray-400 hidden lg:inline">{t.bpm}</span>
-            <input
-              type="number"
-              value={bpm}
-              onChange={(e) => onBpmChange(Math.max(60, Math.min(200, Number(e.target.value))))}
-              className="w-12 sm:w-14 px-1 py-0.5 bg-surface-100 border border-surface-50/40 rounded text-center text-xs font-mono text-white focus:outline-none focus:border-aura-blue"
-            />
-          </div>
 
           <button
-            onClick={onToggleMetronome}
-            title={t.click}
-            className={`p-1.5 rounded text-xs font-mono transition-colors flex items-center gap-1 ${
-              metronomeOn
-                ? isBeatPulse
-                  ? 'bg-aura-blue text-black font-bold'
-                  : 'bg-surface-50 text-aura-blue border border-aura-blue/40'
-                : 'text-gray-400 hover:text-white'
-            }`}
+            onClick={onRecordClick}
+            title={t.recVocal}
+            className="flex items-center gap-1 px-2 py-1 rounded-md bg-aura-red/20 hover:bg-aura-red/30 text-aura-red border border-aura-red/40 transition-colors"
           >
-            <Clock className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{t.click}</span>
+            <Circle className="w-3 h-3 fill-current animate-pulse" />
+            <span className="text-[11px] font-bold tracking-wider hidden md:inline">{t.recVocal}</span>
           </button>
         </div>
+
+        {/* Time display: Bars/Beats & Minutes/Seconds */}
+        <div className="hidden sm:flex items-center gap-2 bg-surface-300 px-3 py-1.5 rounded-lg border border-surface-50/30 font-mono text-xs">
+          <Clock className="w-3.5 h-3.5 text-aura-blue" />
+          <span className="text-white font-bold">{formatBarsBeats(currentTime, bpm)}</span>
+          <span className="text-gray-500">|</span>
+          <span className="text-gray-300">{formatTime(currentTime)}</span>
+        </div>
+
+        {/* Tempo (BPM) control */}
+        <div className="flex items-center bg-surface-300 rounded-lg px-2.5 py-1 border border-surface-50/30 text-xs">
+          <span className="text-gray-400 mr-1.5 font-bold">{t.bpm}</span>
+          <input
+            type="number"
+            min="60"
+            max="220"
+            value={bpm}
+            onChange={(e) => onBpmChange(parseInt(e.target.value) || 140)}
+            className="w-12 bg-transparent text-white font-mono font-bold focus:outline-none"
+          />
+        </div>
+
+        {/* Key Scale Badge */}
+        <div className="hidden lg:flex items-center bg-surface-300 rounded-lg px-2.5 py-1 border border-surface-50/30 text-xs text-gray-300">
+          <span className="text-aura-purple font-semibold mr-1">KEY:</span>
+          <span>{keyScale}</span>
+        </div>
+
+        {/* Metronome Toggle Button */}
+        <button
+          onClick={onToggleMetronome}
+          title={t.click}
+          className={`px-2 py-1 rounded-lg border text-xs font-bold transition-all ${
+            metronomeOn
+              ? isBeatPulse
+                ? 'bg-aura-gold text-black border-aura-gold shadow-glow'
+                : 'bg-surface-50 text-aura-gold border-aura-gold/50'
+              : 'bg-surface-300 text-gray-500 border-surface-50/30 hover:text-gray-300'
+          }`}
+        >
+          {t.click}
+        </button>
       </div>
 
-      {/* Right: Master Output, Language Switch & AI Assistant */}
+      {/* Right: Language, Pricing/Upgrade, User Auth, Master Volume */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Language Switcher (SK / EN) */}
-        <div className="flex items-center bg-surface-300 rounded-lg p-0.5 border border-surface-50/40 text-xs font-mono">
+        {/* Language Switcher Pill */}
+        <div className="flex items-center bg-surface-300 p-0.5 rounded-lg border border-surface-50/30">
           <button
             onClick={() => setLanguage('sk')}
             className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 ${
@@ -196,8 +223,90 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
           </button>
         </div>
 
+        {/* Upgrade / Pricing Button */}
+        {plan !== 'STUDIO_PRO' && (
+          <button
+            onClick={onOpenPricing}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-aura-gold/20 to-amber-500/30 hover:from-aura-gold/30 hover:to-amber-500/40 border border-aura-gold/60 text-aura-gold hover:text-white text-xs font-extrabold tracking-wide transition-all shadow-[0_0_12px_rgba(255,215,0,0.25)]"
+          >
+            <Crown className="w-3.5 h-3.5 fill-current" />
+            <span className="hidden sm:inline">{t.upgradeToPro}</span>
+          </button>
+        )}
+
+        {/* User Account / Auth Button */}
+        {session ? (
+          <div className="relative">
+            <button
+              onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-300 hover:bg-surface-100 border border-surface-50/40 text-xs text-white transition"
+            >
+              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-primary to-purple-600 flex items-center justify-center text-[10px] font-bold text-black uppercase">
+                {(session.user?.name || session.user?.email || 'U')[0]}
+              </div>
+              <span className="hidden md:inline font-semibold max-w-[100px] truncate">
+                {session.user?.name || session.user?.email?.split('@')[0]}
+              </span>
+              <span
+                className={`text-[9px] px-1.5 py-0.5 rounded font-black tracking-wider uppercase ${
+                  plan === 'STUDIO_PRO'
+                    ? 'bg-amber-400/20 text-amber-300 border border-amber-400/40'
+                    : plan === 'PRO_ARTIST'
+                    ? 'bg-primary/20 text-primary border border-primary/40'
+                    : 'bg-zinc-800 text-zinc-400'
+                }`}
+              >
+                {plan === 'STUDIO_PRO' ? 'STUDIO' : plan === 'PRO_ARTIST' ? 'PRO' : 'FREE'}
+              </span>
+              <ChevronDown className="w-3 h-3 text-zinc-400" />
+            </button>
+
+            {/* Dropdown Menu */}
+            {userDropdownOpen && (
+              <div
+                className="absolute right-0 mt-2 w-56 bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl p-2 z-50 animate-fade-in"
+                onMouseLeave={() => setUserDropdownOpen(false)}
+              >
+                <div className="px-3 py-2 border-b border-zinc-800 mb-1">
+                  <p className="text-xs font-bold text-white truncate">
+                    {session.user?.name || 'Artist'}
+                  </p>
+                  <p className="text-[11px] text-zinc-400 truncate">{session.user?.email}</p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setUserDropdownOpen(false);
+                    if (onOpenPricing) onOpenPricing();
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-zinc-300 hover:text-white hover:bg-zinc-800 transition"
+                >
+                  <CreditCard className="w-4 h-4 text-primary" />
+                  <span>{t.pricing} / {t.manageBilling}</span>
+                </button>
+
+                <button
+                  onClick={() => signOut()}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-red-400 hover:text-red-300 hover:bg-red-950/40 transition mt-1"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>{t.signOut}</span>
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={onOpenAuth}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold border border-zinc-700 transition"
+          >
+            <LogIn className="w-3.5 h-3.5 text-primary" />
+            <span>{t.signIn}</span>
+          </button>
+        )}
+
         {/* Master Volume Knob / Fader & VU meter */}
-        <div className="hidden xl:flex items-center gap-2 bg-surface-300 px-2.5 py-1 rounded-lg border border-surface-50/30">
+        <div className="hidden 2xl:flex items-center gap-2 bg-surface-300 px-2.5 py-1 rounded-lg border border-surface-50/30">
           <Volume2 className="w-4 h-4 text-gray-400" />
           <input
             type="range"

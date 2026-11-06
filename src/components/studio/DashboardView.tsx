@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import {
   Plus,
   Flame,
@@ -10,6 +11,8 @@ import {
   Copy,
   Layers,
   Sparkles,
+  Crown,
+  Zap,
 } from 'lucide-react';
 import { ProjectData, HipHopGenre } from '@/types';
 import { formatTime } from '@/lib/utils';
@@ -28,6 +31,7 @@ interface DashboardViewProps {
   }) => void;
   onDuplicateProject: (projectId: string) => void;
   onDeleteProject: (projectId: string) => void;
+  onOpenPricing?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -36,8 +40,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onCreateProject,
   onDuplicateProject,
   onDeleteProject,
+  onOpenPricing,
 }) => {
+  const { data: session } = useSession();
   const { t, language } = useI18n();
+  const userPlan = (session?.user as any)?.plan || 'FREE';
   const [showNewTrackModal, setShowNewTrackModal] = useState<boolean>(false);
   const [title, setTitle] = useState<string>('');
   const [genre, setGenre] = useState<HipHopGenre>('TRAP');
@@ -89,6 +96,38 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <Plus className="w-5 h-5 stroke-[3]" /> {t.createNewTrack}
         </button>
       </div>
+
+      {/* Subscription Tier Banner (If on Free plan) */}
+      {userPlan === 'FREE' && (
+        <div className="bg-gradient-to-r from-purple-950/70 via-zinc-900 to-primary/20 border border-primary/40 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0 border border-primary/30">
+              <Crown className="w-5 h-5 text-aura-gold" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-white font-bold text-sm">
+                  {language === 'sk' ? 'Aktivuj neobmedzený PRO prístup' : 'Upgrade to Unlimited PRO'}
+                </span>
+                <span className="text-[10px] bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded font-black uppercase">
+                  14.99 € / mesiac
+                </span>
+              </div>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                {language === 'sk'
+                  ? 'Získaj neobmedzené rapové projekty, Auto-Tune, Stem export a AI generovanie beatov.'
+                  : 'Unlock unlimited studio multitracks, Auto-Tune, Stem export, and AI beat generation.'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onOpenPricing}
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-aura-gold to-amber-500 hover:brightness-110 text-black font-black text-xs tracking-wider uppercase shrink-0 shadow-lg"
+          >
+            {language === 'sk' ? 'Odomknúť PRO' : 'Unlock PRO'}
+          </button>
+        </div>
+      )}
 
       {/* Projects List */}
       <div className="space-y-4">

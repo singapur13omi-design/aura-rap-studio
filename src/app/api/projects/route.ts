@@ -1,9 +1,17 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as any)?.id;
+
+    const whereClause = userId ? { userId } : { userId: null };
+
     const projects = await prisma.project.findMany({
+      where: whereClause,
       include: {
         tracks: true,
       },
@@ -21,6 +29,30 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as any)?.id;
+    const userPlan = (session?.user as any)?.plan || 'FREE';
+
+    // Check plan project limit for FREE tier
+    if (userId && userPlan === 'FREE') {
+      const projectCount = await prisma.project.count({
+        where: { userId },
+      });
+
+      if (projectCount >= 1) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'FREE_LIMIT_REACHED',
+            message:
+              'Skúšobná verzia (FREE) umožňuje 1 projekt. Pre neobmedzený počet skladieb a multitrackov aktivuj PRO plán.',
+            requiresUpgrade: true,
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     const body = await req.json();
     const { title, genre, bpm, keyScale, language, projectType } = body;
 
@@ -44,6 +76,7 @@ export async function POST(req: Request) {
         language: language || 'sk',
         projectType: projectType || 'RECORD_VOICE',
         status: 'IN_PROGRESS',
+        userId: userId || null,
         tracks: {
           create: [
             {
@@ -58,25 +91,25 @@ export async function POST(req: Request) {
             {
               name: 'Double Vocal',
               layerType: 'DOUBLE_VOCAL',
-              color: '#9D4EDD',
-              volume: 0.75,
-              pan: -0.3,
+              color: '#A855F7',
+              volume: 0.7,
+              pan: -0.2,
               orderIndex: 1,
               effects: defaultFX,
             },
             {
-              name: 'Ad-Libs',
+              name: 'Ad-Libs & Hype',
               layerType: 'AD_LIBS',
-              color: '#FFD166',
-              volume: 0.7,
-              pan: 0.5,
+              color: '#EAB308',
+              volume: 0.75,
+              pan: 0.2,
               orderIndex: 2,
               effects: defaultFX,
             },
             {
-              name: 'Beat / Instrumental',
+              name: '808 Trap Beat',
               layerType: 'BEAT',
-              color: '#FF2A6D',
+              color: '#EF4444',
               volume: 0.85,
               pan: 0.0,
               orderIndex: 3,
@@ -90,7 +123,7 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ success: true, project });
+    return NextResponse.json({ success: true, project }, { status: 201 });
   } catch (err: any) {
     console.error('Failed to create project:', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { AppProviders } from '@/components/providers/AppProviders';
 
 export const metadata: Metadata = {
   title: 'AURA RAP STUDIO – Professional Digital Hip-Hop & Rap Studio',
@@ -14,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="sk" className="dark">
       <body className="bg-background text-foreground antialiased min-h-screen flex flex-col">
-        {children}
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );
