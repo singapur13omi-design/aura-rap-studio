@@ -7,10 +7,15 @@ import { useI18n } from '@/lib/i18n';
 
 interface VipGatekeeperProps {
   onUnlock: () => void;
+  onBackToLanding?: () => void;
   initialErrorCode?: string | null;
 }
 
-export const VipGatekeeper: React.FC<VipGatekeeperProps> = ({ onUnlock, initialErrorCode }) => {
+export const VipGatekeeper: React.FC<VipGatekeeperProps> = ({
+  onUnlock,
+  onBackToLanding,
+  initialErrorCode,
+}) => {
   const { language, setLanguage } = useI18n();
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(initialErrorCode || null);
@@ -116,6 +121,16 @@ export const VipGatekeeper: React.FC<VipGatekeeperProps> = ({ onUnlock, initialE
             <span>{language === 'sk' ? 'ODOMKNÚŤ ŠTÚDIO (14 DNÍ ZDARMA)' : 'UNLOCK STUDIO (14 DAYS FREE)'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
+
+          {onBackToLanding && (
+            <button
+              type="button"
+              onClick={onBackToLanding}
+              className="w-full py-2.5 text-xs font-accent text-zinc-400 hover:text-white transition flex items-center justify-center gap-1.5"
+            >
+              <span>← {language === 'sk' ? 'Späť na prezentáciu a príbeh 13OMI' : 'Back to Presentation & 13OMI Story'}</span>
+            </button>
+          )}
         </form>
 
         {/* Feature Pills */}

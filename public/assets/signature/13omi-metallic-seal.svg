@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="sealGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF2D6" />
+      <stop offset="30%" stop-color="#C8A45D" />
+      <stop offset="70%" stop-color="#8C6628" />
+      <stop offset="100%" stop-color="#E8C888" />
+    </linearGradient>
+    <filter id="sealShadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#C8A45D" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <g filter="url(#sealShadow)">
+    <!-- Outer Serrated Stamp Ring -->
+    <circle cx="100" cy="100" r="92" stroke="url(#sealGold)" stroke-width="2" stroke-dasharray="3 3" />
+    <circle cx="100" cy="100" r="85" stroke="url(#sealGold)" stroke-width="3" />
+    <circle cx="100" cy="100" r="80" stroke="#08090C" stroke-width="1.5" />
+    
+    <!-- Circular Text Path -->
+    <path id="textCircle" d="M 100,100 m -64,0 a 64,64 0 1,1 128,0 a 64,64 0 1,1 -128,0" fill="none" />
+    
+    <text font-family="'Space Grotesk', sans-serif" font-size="8.5" font-weight="800" fill="url(#sealGold)" letter-spacing="2.2">
+      <textPath href="#textCircle" startOffset="50%" text-anchor="middle">
+        • ORIGINAL VISION • FOUNDED BY 13OMI • SOUND IDENTITY •
+      </textPath>
+    </text>
+
+    <!-- Center Emblem -->
+    <circle cx="100" cy="100" r="48" fill="#111318" stroke="url(#sealGold)" stroke-width="2" />
+    
+    <!-- 13OMI Monogram Centerpiece -->
+    <text x="100" y="98" font-family="'Bebas Neue', 'Oswald', sans-serif" font-size="32" font-weight="900" fill="url(#sealGold)" text-anchor="middle" letter-spacing="2">
+      13OMI
+    </text>
+    <text x="100" y="114" font-family="'Space Grotesk', sans-serif" font-size="7" font-weight="800" fill="#C6CBD3" text-anchor="middle" letter-spacing="2.5">
+      SIGNATURE
+    </text>
+
+    <!-- Stars -->
+    <polygon points="100,60 102,66 108,66 103,70 105,76 100,72 95,76 97,70 92,66 98,66" fill="url(#sealGold)" />
+    <polygon points="100,126 102,132 108,132 103,136 105,142 100,138 95,142 97,136 92,132 98,132" fill="url(#sealGold)" />
+  </g>
+</svg>

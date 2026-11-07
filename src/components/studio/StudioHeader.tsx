@@ -46,6 +46,7 @@ interface StudioHeaderProps {
   onOpenPricing?: () => void;
   onOpenAuth?: () => void;
   onOpenTutorial?: () => void;
+  onSwitchToLanding?: () => void;
   vipDaysRemaining?: number;
 }
 
@@ -72,6 +73,7 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
   onOpenPricing,
   onOpenAuth,
   onOpenTutorial,
+  onSwitchToLanding,
   vipDaysRemaining,
 }) => {
   const { data: session } = useSession();
@@ -93,6 +95,19 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
     <header className="h-16 bg-surface-200 border-b border-surface-50/20 px-3 md:px-4 flex items-center justify-between select-none z-30 relative">
       {/* Left: Project title & save indicator */}
       <div className="flex items-center gap-2 md:gap-3">
+        {onSwitchToLanding && (
+          <button
+            onClick={onSwitchToLanding}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-brand-carbon hover:bg-brand-concrete border border-brand-gold/40 hover:border-brand-gold transition shadow-sm text-xs"
+            title="Hip-Hop Culture & 13OMI Story"
+          >
+            <img src="/assets/branding/aura-symbol.svg" alt="AURA" className="w-4 h-4 shrink-0" />
+            <span className="font-accent text-[10px] text-brand-gold font-bold tracking-wider uppercase hidden lg:inline">
+              13OMI
+            </span>
+          </button>
+        )}
+
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-aura-blue animate-pulse-glow" />
           <h1 className="font-bold text-white text-xs sm:text-sm md:text-base tracking-wide truncate max-w-[120px] sm:max-w-[180px] md:max-w-xs">

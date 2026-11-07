@@ -1,9 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #08090c;
+  --background: #08090C;
+  --carbon: #111318;
+  --concrete: #24262C;
+  --steel: #777C87;
+  --chrome: #C6CBD3;
+  --electric: #286BFF;
+  --violet: #713BFF;
+  --neon: #A24EFF;
+  --gold: #C8A45D;
   --foreground: #f8fafc;
 }
 
@@ -11,7 +21,51 @@ body {
   color: var(--foreground);
   background: var(--background);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  overflow: hidden;
+  overflow-x: hidden;
+}
+
+/* Typography styles */
+.font-headline {
+  font-family: 'Bebas Neue', 'Oswald', 'Anton', sans-serif;
+}
+
+.font-accent {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Metallic Gold text gradient */
+.text-gold-metallic {
+  background: linear-gradient(135deg, #FFF2D6 0%, #C8A45D 45%, #9C7838 75%, #E8C888 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Chrome Silver text gradient */
+.text-chrome-metallic {
+  background: linear-gradient(180deg, #FFFFFF 0%, #CBD5E1 50%, #94A3B8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Electric Blue to Violet gradient */
+.text-aura-gradient {
+  background: linear-gradient(90deg, #00E5FF 0%, #286BFF 50%, #A24EFF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Background audio grid texture */
+.bg-audio-grid {
+  background-image: url('/assets/textures/audio-grid.svg');
+  background-repeat: repeat;
+}
+
+/* Background vinyl grooves texture */
+.bg-vinyl-grooves {
+  background-image: url('/assets/textures/vinyl-grooves.svg');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 /* Custom scrollbars for studio look */
@@ -21,14 +75,14 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0e1016;
+  background: #08090C;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #252a38;
+  background: #24262C;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #363c50;
+  background: #777C87;
 }

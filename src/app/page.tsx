@@ -21,6 +21,7 @@ import { AuthModal } from '@/components/auth/AuthModal';
 import { PricingModal } from '@/components/pricing/PricingModal';
 import { VipGatekeeper } from '@/components/vip/VipGatekeeper';
 import { StudioMasterclassModal } from '@/components/tutorial/StudioMasterclassModal';
+import { LandingView } from '@/components/landing/LandingView';
 import { checkVipAccess, activateVipToken } from '@/lib/vipAccess';
 
 import { MultitrackAudioEngine } from '@/lib/audio/engine';
@@ -48,6 +49,9 @@ function AuraRapStudioContent() {
   const [masterPeakDb, setMasterPeakDb] = useState<number>(-60);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
+  // Creative Mode: LANDING (Public Culture & 13OMI Story) vs STUDIO (DAW Workspace)
+  const [viewMode, setViewMode] = useState<'LANDING' | 'STUDIO'>('LANDING');
+
   // VIP Private Beta & 14-Day Access
   const [vipChecked, setVipChecked] = useState<boolean>(false);
   const [isVipUnlocked, setIsVipUnlocked] = useState<boolean>(false);
@@ -66,6 +70,11 @@ function AuraRapStudioContent() {
       const urlVipCode = urlParams.get('vip') || urlParams.get('invite');
       if (urlVipCode) {
         activateVipToken(urlVipCode);
+        setViewMode('STUDIO');
+      }
+
+      if (urlParams.get('studio') === 'true') {
+        setViewMode('STUDIO');
       }
 
       const status = checkVipAccess();
@@ -540,7 +549,44 @@ function AuraRapStudioContent() {
     }
   };
 
-  // VIP Gatekeeper Screen: Restrict access if no valid VIP invite
+  // 1. PUBLIC SHOWCASE & HIP-HOP CULTURE LANDING VIEW
+  if (viewMode === 'LANDING') {
+    return (
+      <div className="relative min-h-screen bg-brand-black text-white">
+        <LandingView
+          onEnterStudio={() => setViewMode('STUDIO')}
+          onOpenTutorial={() => setTutorialModalOpen(true)}
+        />
+
+        {/* Studio Masterclass Tutorial */}
+        <StudioMasterclassModal
+          isOpen={tutorialModalOpen}
+          onClose={() => setTutorialModalOpen(false)}
+          onStartRecording={() => {
+            setTutorialModalOpen(false);
+            setViewMode('STUDIO');
+            const mainVocal = currentProject?.tracks.find((trk) => trk.layerType === 'MAIN_VOCAL');
+            handleOpenRecordTrack(mainVocal?.id || currentProject?.tracks[0]?.id || '');
+          }}
+        />
+
+        {/* Authentication Dialog */}
+        <AuthModal
+          isOpen={authModalOpen}
+          onClose={() => setAuthModalOpen(false)}
+        />
+
+        {/* Subscription & Pricing Modal */}
+        <PricingModal
+          isOpen={pricingModalOpen}
+          onClose={() => setPricingModalOpen(false)}
+          onOpenAuth={() => setAuthModalOpen(true)}
+        />
+      </div>
+    );
+  }
+
+  // 2. VIP GATEKEEPER SCREEN (If entering studio without VIP unlock)
   if (vipChecked && !isVipUnlocked) {
     return (
       <VipGatekeeper
@@ -549,11 +595,14 @@ function AuraRapStudioContent() {
           setIsVipUnlocked(true);
           setVipDaysRemaining(status.daysRemaining);
           setTutorialModalOpen(true);
+          setViewMode('STUDIO');
         }}
+        onBackToLanding={() => setViewMode('LANDING')}
       />
     );
   }
 
+  // 3. FULL DAW WORKSTATION
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-background text-foreground font-sans">
       <StudioHeader
@@ -592,6 +641,7 @@ function AuraRapStudioContent() {
         onOpenPricing={() => setPricingModalOpen(true)}
         onOpenAuth={() => setAuthModalOpen(true)}
         onOpenTutorial={() => setTutorialModalOpen(true)}
+        onSwitchToLanding={() => setViewMode('LANDING')}
         vipDaysRemaining={vipDaysRemaining}
       />
 
@@ -613,7 +663,11 @@ function AuraRapStudioContent() {
       )}
 
       <div className="flex-1 flex overflow-hidden">
-        <StudioSidebar currentTab={currentTab} onSelectTab={setCurrentTab} />
+        <StudioSidebar
+          currentTab={currentTab}
+          onSelectTab={setCurrentTab}
+          onSwitchToLanding={() => setViewMode('LANDING')}
+        />
 
         {currentTab === 'DASHBOARD' && (
           <DashboardView

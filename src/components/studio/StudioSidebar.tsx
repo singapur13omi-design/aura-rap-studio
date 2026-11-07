@@ -12,6 +12,7 @@ import {
   Flame,
   UserCheck,
   Download,
+  Compass,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 
@@ -30,11 +31,13 @@ export type StudioTab =
 interface StudioSidebarProps {
   currentTab: StudioTab;
   onSelectTab: (tab: StudioTab) => void;
+  onSwitchToLanding?: () => void;
 }
 
 export const StudioSidebar: React.FC<StudioSidebarProps> = ({
   currentTab,
   onSelectTab,
+  onSwitchToLanding,
 }) => {
   const { t } = useI18n();
 
@@ -71,6 +74,17 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
 
         {/* Navigation Items */}
         <nav className="p-2 space-y-1">
+          {onSwitchToLanding && (
+            <button
+              onClick={onSwitchToLanding}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-accent font-bold text-brand-gold bg-brand-black/90 border border-brand-gold/30 hover:border-brand-gold hover:bg-brand-carbon transition mb-3 shadow-sm"
+              title="Hip-Hop Culture & 13OMI Story"
+            >
+              <Compass className="w-4 h-4 text-brand-gold shrink-0" />
+              <span className="hidden md:inline truncate tracking-wider">CULTURE & STORY</span>
+            </button>
+          )}
+
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentTab === item.id;
@@ -115,6 +129,17 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
           <div className="flex items-center justify-between text-gray-400 font-mono">
             <span>{t.aiProducer}</span>
             <span className="text-aura-blue">{t.aiProducerActive}</span>
+          </div>
+
+          <div className="pt-2 border-t border-brand-concrete/40 flex items-center justify-between">
+            <span className="font-accent text-[8.5px] text-brand-steel tracking-widest uppercase">
+              VISION BY
+            </span>
+            <img
+              src="/assets/branding/13omi-signature.svg"
+              alt="13OMI"
+              className="h-4.5 w-auto object-contain opacity-80 hover:opacity-100 transition"
+            />
           </div>
         </div>
       </div>

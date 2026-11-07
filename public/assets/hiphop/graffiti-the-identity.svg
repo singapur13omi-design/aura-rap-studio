@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" fill="none">
+  <defs>
+    <radialGradient id="sprayGlow" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#A24EFF" stop-opacity="0.35" />
+      <stop offset="50%" stop-color="#286BFF" stop-opacity="0.2" />
+      <stop offset="90%" stop-color="#08090C" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#08090C" />
+    </radialGradient>
+    <linearGradient id="graffitiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E5FF" />
+      <stop offset="35%" stop-color="#286BFF" />
+      <stop offset="70%" stop-color="#A24EFF" />
+      <stop offset="100%" stop-color="#C8A45D" />
+    </linearGradient>
+    <pattern id="brickPattern" width="40" height="20" patternUnits="userSpaceOnUse">
+      <rect width="40" height="20" fill="none" stroke="#24262C" stroke-width="0.8" opacity="0.3" />
+      <line x1="20" y1="0" x2="20" y2="10" stroke="#24262C" stroke-width="0.8" opacity="0.3" />
+      <line x1="0" y1="10" x2="40" y2="10" stroke="#24262C" stroke-width="0.8" opacity="0.3" />
+      <line x1="0" y1="20" x2="40" y2="20" stroke="#24262C" stroke-width="0.8" opacity="0.3" />
+    </pattern>
+  </defs>
+
+  <rect width="600" height="400" fill="#08090C" />
+  <!-- Brick Texture Wall Overlay -->
+  <rect width="600" height="400" fill="url(#brickPattern)" />
+  <circle cx="300" cy="200" r="230" fill="url(#sprayGlow)" />
+
+  <!-- Wildstyle / Tag Piece Artwork: AURA 13 -->
+  <g transform="translate(70, 70)">
+    <!-- Shadow / 3D extrusion block -->
+    <path d="M 50 120 L 70 140 L 410 140 L 390 120 Z" fill="#0E1016" opacity="0.9" />
+    <path d="M 40 40 L 60 60 L 60 160 L 40 140 Z" fill="#111318" />
+
+    <!-- Letter A in Wildstyle with arrows -->
+    <path d="M 50 140 L 85 30 L 125 30 L 160 140 L 132 140 L 120 102 L 90 102 L 78 140 Z M 105 58 L 97 82 L 113 82 Z" fill="url(#graffitiGrad)" stroke="#FFFFFF" stroke-width="3" />
+    <!-- Arrow Accent on A -->
+    <path d="M 125 30 L 145 15 L 140 28 L 160 25 L 135 45 Z" fill="#C8A45D" />
+
+    <!-- Letter U with drip -->
+    <path d="M 175 30 L 205 30 L 205 95 C 205 115 220 118 230 118 C 240 118 255 115 255 95 L 255 30 L 285 30 L 285 98 C 285 132 258 144 230 144 C 202 144 175 132 175 98 Z" fill="url(#graffitiGrad)" stroke="#FFFFFF" stroke-width="3" />
+    <!-- Paint Drip -->
+    <path d="M 226 144 Q 228 175 228 185 Q 228 190 231 190 Q 234 190 234 185 Q 234 175 236 144 Z" fill="#00E5FF" />
+    <circle cx="231" cy="200" r="3.5" fill="#00E5FF" />
+
+    <!-- Letter R with crown cut -->
+    <path d="M 300 30 L 350 30 C 375 30 388 45 388 68 C 388 85 375 95 355 98 L 392 140 L 360 140 L 328 100 L 328 140 L 300 140 Z M 328 54 L 328 78 L 345 78 C 355 78 360 74 360 66 C 360 58 355 54 345 54 Z" fill="url(#graffitiGrad)" stroke="#FFFFFF" stroke-width="3" />
+
+    <!-- Spray Splatters -->
+    <circle cx="395" cy="50" r="4" fill="#A24EFF" />
+    <circle cx="410" cy="42" r="2" fill="#A24EFF" />
+    <circle cx="420" cy="58" r="3" fill="#A24EFF" />
+    <circle cx="45" cy="80" r="3.5" fill="#C8A45D" />
+    <circle cx="35" cy="95" r="2" fill="#C8A45D" />
+
+    <!-- 13OMI Metallic Tag in corner -->
+    <text x="350" y="195" font-family="'Space Grotesk', sans-serif" font-size="22" font-weight="900" fill="#C8A45D" letter-spacing="3">
+      13OMI
+    </text>
+  </g>
+
+  <!-- Typography Accent -->
+  <text x="50" y="340" font-family="'Bebas Neue', sans-serif" font-size="28" font-weight="900" letter-spacing="4" fill="#C6CBD3">
+    THE IDENTITY
+  </text>
+  <text x="50" y="358" font-family="'Space Grotesk', sans-serif" font-size="11" font-weight="600" letter-spacing="2" fill="#C8A45D">
+    GRAFFITI • URBAN WALLS • STREET ART MARKS
+  </text>
+</svg>
