@@ -4,6 +4,7 @@ import GoogleProvider from 'next-auth/providers/google';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import bcrypt from 'bcryptjs';
 import { prisma } from './prisma';
+import { isOwnerEmail } from './security';
 
 export const authOptions: NextAuthOptions = {
   // @ts-ignore PrismaAdapter types match
@@ -49,11 +50,8 @@ export const authOptions: NextAuthOptions = {
           throw new Error('INVALID_CREDENTIALS');
         }
 
-        const isOwner =
-          user.role === 'OWNER' ||
-          user.email === 'singapur.13omi@gmail.com' ||
-          user.email.includes('13omi') ||
-          user.email === (process.env.OWNER_EMAIL || '').toLowerCase().trim();
+        // Strict Server-side Owner Check: ONLY exact match to verified owner identity
+        const isOwner = user.role === 'OWNER' || isOwnerEmail(user.email);
 
         return {
           id: user.id,
@@ -62,7 +60,8 @@ export const authOptions: NextAuthOptions = {
           role: isOwner ? 'OWNER' : user.role,
           plan: isOwner ? 'OWNER' : user.plan,
           subscriptionStatus: isOwner ? 'ACTIVE' : user.subscriptionStatus,
-        };
+          trialEndsAt: user.trialEndsAt ? user.trialEndsAt.toISOString() : null,
+        } as any;
       },
     }),
   ],
@@ -71,30 +70,31 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = (user as any).role || 'USER';
-        token.plan = (user as any).plan || 'FREE';
-        token.subscriptionStatus = (user as any).subscriptionStatus || 'INACTIVE';
+        token.plan = (user as any).plan || 'FREE_TRIAL';
+        token.subscriptionStatus = (user as any).subscriptionStatus || 'TRIALING';
+        token.trialEndsAt = (user as any).trialEndsAt || null;
       }
 
-      // If user session update is triggered (e.g. after Stripe checkout)
+      // If user session update is triggered (e.g. after Stripe checkout or VIP redeem)
       if (trigger === 'update' && session?.plan) {
         token.plan = session.plan;
         token.subscriptionStatus = session.subscriptionStatus;
+        if (session.trialEndsAt) token.trialEndsAt = session.trialEndsAt;
       }
 
-      // Periodically refresh plan from DB if user ID is known
+      // Periodically refresh plan and trial from DB if user ID is known
       if (token.id && !user) {
         try {
           const freshUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { plan: true, subscriptionStatus: true, role: true },
+            select: { plan: true, subscriptionStatus: true, role: true, email: true, trialEndsAt: true },
           });
           if (freshUser) {
-            const isOwner =
-              freshUser.role === 'OWNER' ||
-              (token.email && (token.email === 'singapur.13omi@gmail.com' || (token.email as string).includes('13omi')));
+            const isOwner = freshUser.role === 'OWNER' || isOwnerEmail(freshUser.email);
             token.plan = isOwner ? 'OWNER' : freshUser.plan;
             token.subscriptionStatus = isOwner ? 'ACTIVE' : freshUser.subscriptionStatus;
             token.role = isOwner ? 'OWNER' : freshUser.role;
+            token.trialEndsAt = freshUser.trialEndsAt ? freshUser.trialEndsAt.toISOString() : null;
           }
         } catch {
           // ignore db errors on jwt refresh
@@ -107,8 +107,9 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role || 'USER';
-        (session.user as any).plan = token.plan || 'FREE';
-        (session.user as any).subscriptionStatus = token.subscriptionStatus || 'INACTIVE';
+        (session.user as any).plan = token.plan || 'FREE_TRIAL';
+        (session.user as any).subscriptionStatus = token.subscriptionStatus || 'TRIALING';
+        (session.user as any).trialEndsAt = token.trialEndsAt || null;
       }
       return session;
     },

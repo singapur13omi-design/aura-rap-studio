@@ -22,7 +22,7 @@ import { PricingModal } from '@/components/pricing/PricingModal';
 import { VipGatekeeper } from '@/components/vip/VipGatekeeper';
 import { StudioMasterclassModal } from '@/components/tutorial/StudioMasterclassModal';
 import { LandingView } from '@/components/landing/LandingView';
-import { checkVipAccess, activateVipToken } from '@/lib/vipAccess';
+import { checkVipAccess, redeemVipCodeOnServer } from '@/lib/vipAccess';
 
 import { MultitrackAudioEngine } from '@/lib/audio/engine';
 import { generateHipHopBeat } from '@/lib/audio/synthesizer';
@@ -69,7 +69,7 @@ function AuraRapStudioContent() {
       const urlParams = new URLSearchParams(window.location.search);
       const urlVipCode = urlParams.get('vip') || urlParams.get('invite');
       if (urlVipCode) {
-        activateVipToken(urlVipCode);
+        redeemVipCodeOnServer(urlVipCode);
         setViewMode('STUDIO');
       }
 

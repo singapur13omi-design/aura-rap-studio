@@ -1,7 +1,43 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { isOwnerEmail } from '@/lib/security';
+
+const FREE_TRIAL_AI_LIMIT = 50;
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as any)?.id;
+    const isOwner = (session?.user as any)?.role === 'OWNER' || isOwnerEmail(session?.user?.email);
+
+    // Limit AI operations for free trial users to prevent system exhaustion
+    if (userId && !isOwner) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { aiUsageCount: true, subscriptionStatus: true },
+      });
+
+      if (user && user.subscriptionStatus !== 'ACTIVE' && user.aiUsageCount >= FREE_TRIAL_AI_LIMIT) {
+        return NextResponse.json(
+          {
+            error: 'AI_LIMIT_REACHED',
+            message:
+              'Dosiahli ste limit 50 bezplatných AI rapových asistencií v skúšobnej verzii. Pre neobmedzeného AI producenta aktivujte predplatné.',
+            requiresUpgrade: true,
+          },
+          { status: 429 }
+        );
+      }
+
+      // Increment AI usage count
+      await prisma.user.update({
+        where: { id: userId },
+        data: { aiUsageCount: { increment: 1 } },
+      });
+    }
+
     const body = await req.json();
     const { message, language, projectContext } = body;
     const isSk = language !== 'en';

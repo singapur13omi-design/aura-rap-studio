@@ -14,7 +14,7 @@ import {
   Trophy,
   Zap,
 } from 'lucide-react';
-import { activateVipToken, activate30DayFreeTrial } from '@/lib/vipAccess';
+import { activate30DayFreeTrial, redeemVipCodeOnServer } from '@/lib/vipAccess';
 import { useI18n } from '@/lib/i18n';
 
 interface VipGatekeeperProps {
@@ -41,21 +41,22 @@ export const VipGatekeeper: React.FC<VipGatekeeperProps> = ({
     onUnlock();
   };
 
-  const handleSubmitCode = (e: React.FormEvent) => {
+  const handleSubmitCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!code.trim()) return;
 
     setLoading(true);
     setError(null);
 
-    const res = activateVipToken(code.trim());
+    const res = await redeemVipCodeOnServer(code.trim());
     if (res.success) {
       onUnlock();
     } else {
       setError(
-        isSk
-          ? 'Tento VIP alebo súťažný kód je neplatný. Skontroluj kód od 13OMI.'
-          : 'Invalid VIP or contest code. Please verify your code from 13OMI.'
+        res.error ||
+          (isSk
+            ? 'Tento VIP alebo súťažný kód je neplatný. Skontroluj kód od 13OMI.'
+            : 'Invalid VIP or contest code. Please verify your code from 13OMI.')
       );
       setLoading(false);
     }

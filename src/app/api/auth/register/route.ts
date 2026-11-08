@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
+import { isOwnerEmail } from '@/lib/security';
 
 export async function POST(req: Request) {
   try {
@@ -37,23 +38,27 @@ export async function POST(req: Request) {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    const isOwnerEmail =
-      normalizedEmail === 'singapur.13omi@gmail.com' ||
-      normalizedEmail.includes('13omi') ||
-      normalizedEmail === (process.env.OWNER_EMAIL || '').toLowerCase().trim();
+    // Strict Owner check: ONLY exact match to verified identity
+    const isOwner = isOwnerEmail(normalizedEmail);
 
-    const role = isOwnerEmail ? 'OWNER' : 'USER';
-    const plan = isOwnerEmail ? 'OWNER' : 'FREE_TRIAL';
-    const subscriptionStatus = isOwnerEmail ? 'ACTIVE' : 'TRIALING';
+    const role = isOwner ? 'OWNER' : 'USER';
+    const plan = isOwner ? 'OWNER' : 'FREE_TRIAL';
+    const subscriptionStatus = isOwner ? 'ACTIVE' : 'TRIALING';
+
+    // 30 Days Trial calculation handled purely on server
+    const trialEndsAt = isOwner
+      ? null
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     const newUser = await prisma.user.create({
       data: {
         email: normalizedEmail,
-        name: name?.trim() || (isOwnerEmail ? '13OMI (Founder)' : normalizedEmail.split('@')[0]),
+        name: name?.trim() || (isOwner ? '13OMI (Founder)' : normalizedEmail.split('@')[0]),
         passwordHash,
         role,
         plan,
         subscriptionStatus,
+        trialEndsAt,
       },
       select: {
         id: true,
@@ -62,6 +67,7 @@ export async function POST(req: Request) {
         role: true,
         plan: true,
         subscriptionStatus: true,
+        trialEndsAt: true,
         createdAt: true,
       },
     });

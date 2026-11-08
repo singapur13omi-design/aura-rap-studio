@@ -1,67 +1,11 @@
 'use client';
 
-export interface VipTokenInfo {
-  code: string;
-  label: string;
-  recipient: string;
-  durationDays: number;
-}
-
-export const VALID_VIP_TOKENS: Record<string, VipTokenInfo> = {
-  // 3 Contest Winner Tokens (1 Year Free Access)
-  'AURA-CONTEST-WINNER-1': {
-    code: 'AURA-CONTEST-WINNER-1',
-    label: '13OMI Contest Winner #1',
-    recipient: 'Výherca súťaže o 1-ročnú licenciu zdarma',
-    durationDays: 365,
-  },
-  'AURA-CONTEST-WINNER-2': {
-    code: 'AURA-CONTEST-WINNER-2',
-    label: '13OMI Contest Winner #2',
-    recipient: 'Výherca súťaže o 1-ročnú licenciu zdarma',
-    durationDays: 365,
-  },
-  'AURA-CONTEST-WINNER-3': {
-    code: 'AURA-CONTEST-WINNER-3',
-    label: '13OMI Contest Winner #3',
-    recipient: 'Výherca súťaže o 1-ročnú licenciu zdarma',
-    durationDays: 365,
-  },
-  // Beta invites
-  'AURA-VIP-FLOW-01': {
-    code: 'AURA-VIP-FLOW-01',
-    label: 'VIP Rapper 01',
-    recipient: 'Artist Beta Invite #1',
-    durationDays: 30,
-  },
-  'AURA-VIP-BEAT-02': {
-    code: 'AURA-VIP-BEAT-02',
-    label: 'VIP Producer 02',
-    recipient: 'Artist Beta Invite #2',
-    durationDays: 30,
-  },
-  'AURA-VIP-PRO-03': {
-    code: 'AURA-VIP-PRO-03',
-    label: 'VIP Studio 03',
-    recipient: 'Artist Beta Invite #3',
-    durationDays: 30,
-  },
-  // Master Creator Pass (Lifetime unlimited for 13OMI Founder)
-  'AURA-MASTER-CREATOR-2026': {
-    code: 'AURA-MASTER-CREATOR-2026',
-    label: 'Master Studio Owner (13OMI)',
-    recipient: 'Founder & Studio Owner (Doživotne Zadarmo)',
-    durationDays: 3650, // 10 years / lifetime
-  },
-};
-
 const VIP_STORAGE_KEY = 'aura_rap_studio_vip_session';
 
 export interface StoredVipSession {
-  code: string;
   activatedAt: number; // timestamp ms
   durationDays: number;
-  isOwner?: boolean;
+  label?: string;
 }
 
 export function getStoredVipSession(): StoredVipSession | null {
@@ -76,20 +20,18 @@ export function getStoredVipSession(): StoredVipSession | null {
 }
 
 /**
- * Activates a 30-day free trial for any new visitor or registered user without a code
+ * Activates local 30-day trial session for anonymous guest mode
  */
 export function activate30DayFreeTrial(): StoredVipSession {
   const existing = getStoredVipSession();
-  if (existing && !existing.code.startsWith('AURA-FREE-TRIAL-30D')) {
-    // Keep existing custom VIP or Owner session
+  if (existing) {
     return existing;
   }
 
   const session: StoredVipSession = {
-    code: 'AURA-FREE-TRIAL-30D',
-    activatedAt: existing?.activatedAt || Date.now(),
+    activatedAt: Date.now(),
     durationDays: 30,
-    isOwner: false,
+    label: '30-Day Free Studio Trial',
   };
 
   if (typeof window !== 'undefined') {
@@ -98,61 +40,79 @@ export function activate30DayFreeTrial(): StoredVipSession {
   return session;
 }
 
-export function activateVipToken(code: string): { success: boolean; session?: StoredVipSession; error?: string } {
+/**
+ * Validates and redeems a VIP or Contest code via the secure server-side API.
+ * NO master codes or database tokens are stored on the client!
+ */
+export async function redeemVipCodeOnServer(code: string): Promise<{
+  success: boolean;
+  durationDays?: number;
+  label?: string;
+  error?: string;
+}> {
   const normalized = code.trim().toUpperCase();
-  const tokenInfo = VALID_VIP_TOKENS[normalized];
-
-  if (!tokenInfo) {
-    return { success: false, error: 'Neplatný VIP / Súťažný kód (Invalid Code)' };
+  if (!normalized) {
+    return { success: false, error: 'Zadajte kód / Please enter a code' };
   }
 
-  const isOwner = normalized === 'AURA-MASTER-CREATOR-2026';
+  try {
+    const res = await fetch('/api/vip/redeem', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: normalized }),
+    });
 
-  const session: StoredVipSession = {
-    code: normalized,
-    activatedAt: Date.now(),
-    durationDays: tokenInfo.durationDays,
-    isOwner,
-  };
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error || 'Neplatný alebo vyčerpaný kód' };
+    }
 
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(VIP_STORAGE_KEY, JSON.stringify(session));
+    const session: StoredVipSession = {
+      activatedAt: Date.now(),
+      durationDays: data.durationDays || 30,
+      label: data.label,
+    };
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(VIP_STORAGE_KEY, JSON.stringify(session));
+    }
+
+    return {
+      success: true,
+      durationDays: data.durationDays,
+      label: data.label,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message || 'Chyba servera pri overovaní kódu',
+    };
   }
-
-  return { success: true, session };
 }
 
+/**
+ * Checks client-side VIP / trial session status
+ */
 export function checkVipAccess(): {
   isUnlocked: boolean;
   daysRemaining: number;
   session: StoredVipSession | null;
   isExpired: boolean;
-  isOwner: boolean;
 } {
   let session = getStoredVipSession();
 
-  // If no session exists yet, automatically initialize 30-day free trial
+  // If no session exists yet, activate initial 30-day trial
   if (!session) {
     session = activate30DayFreeTrial();
   }
 
-  if (session.isOwner || session.code === 'AURA-MASTER-CREATOR-2026') {
-    return {
-      isUnlocked: true,
-      daysRemaining: 999,
-      session,
-      isExpired: false,
-      isOwner: true,
-    };
-  }
-
   const now = Date.now();
-  const durationMs = session.durationDays * 24 * 60 * 60 * 1000;
+  const durationMs = (session.durationDays || 30) * 24 * 60 * 60 * 1000;
   const expiresAt = session.activatedAt + durationMs;
   const msRemaining = expiresAt - now;
 
   if (msRemaining <= 0) {
-    return { isUnlocked: false, daysRemaining: 0, session, isExpired: true, isOwner: false };
+    return { isUnlocked: false, daysRemaining: 0, session, isExpired: true };
   }
 
   const daysRemaining = Math.max(1, Math.ceil(msRemaining / (24 * 60 * 60 * 1000)));
@@ -162,7 +122,6 @@ export function checkVipAccess(): {
     daysRemaining,
     session,
     isExpired: false,
-    isOwner: false,
   };
 }
 

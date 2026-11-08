@@ -14,9 +14,11 @@ model User {
   emailVerified          DateTime?
   image                  String?
   passwordHash           String?
-  role                   String         @default("USER") // USER, ADMIN
-  plan                   String         @default("FREE") // FREE, PRO_ARTIST, STUDIO_PRO
-  subscriptionStatus     String         @default("INACTIVE") // INACTIVE, ACTIVE, PAST_DUE, CANCELED, TRIALING
+  role                   String         @default("USER") // USER, ADMIN, OWNER
+  plan                   String         @default("FREE_TRIAL") // FREE_TRIAL, MONTHLY_PASS, ANNUAL_PASS, OWNER
+  subscriptionStatus     String         @default("TRIALING") // TRIALING, ACTIVE, PAST_DUE, CANCELED, EXPIRED
+  trialEndsAt            DateTime?
+  aiUsageCount           Int            @default(0)
   stripeCustomerId       String?        @unique
   stripeSubscriptionId   String?        @unique
   stripePriceId          String?
@@ -27,6 +29,7 @@ model User {
   sessions               Session[]
   projects               Project[]
   voiceProfiles          VoiceProfile[]
+  vipRedemptions         VipRedemption[]
 }
 
 model Account {
@@ -207,3 +210,41 @@ model ExportJob {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+model VipCode {
+  id           String          @id @default(uuid())
+  code         String          @unique
+  label        String
+  durationDays Int             @default(30)
+  maxUses      Int             @default(1)
+  timesUsed    Int             @default(0)
+  isRevoked    Boolean         @default(false)
+  isContest    Boolean         @default(false)
+  createdAt    DateTime        @default(now())
+  redemptions  VipRedemption[]
+}
+
+model VipRedemption {
+  id         String   @id @default(uuid())
+  codeId     String
+  vipCode    VipCode  @relation(fields: [codeId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userEmail  String
+  redeemedAt DateTime @default(now())
+
+  @@unique([codeId, userId])
+}
+
+model ContestSubmission {
+  id          String   @id @default(uuid())
+  userId      String?
+  artistName  String
+  email       String
+  trackTitle  String
+  audioUrl    String?
+  socialLink  String?
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+

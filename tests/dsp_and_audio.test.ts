@@ -7,9 +7,8 @@ import {
   getScaleMidiNotes,
 } from '../src/lib/audio/autotune';
 import { calculateAIMix } from '../src/lib/ai/mixingAssistant';
-import { calculateLoudnessStats } from '../src/lib/audio/metering';
 import { AudioTrackItem } from '../src/types';
-import { VALID_VIP_TOKENS } from '../src/lib/vipAccess';
+import { isOwnerEmail, calculateUserAccess } from '../src/lib/security';
 
 describe('Audio DSP and Saturation Tests', () => {
   it('should generate valid soft-saturation transfer curve', () => {
@@ -128,20 +127,70 @@ describe('AI Mixing Engine Tests', () => {
   });
 });
 
-describe('VIP Beta Access Validation Tests', () => {
-  it('should recognize all 3 beta invite tokens, 3 contest winner tokens and master admin pass', () => {
-    expect(VALID_VIP_TOKENS['AURA-VIP-FLOW-01']).toBeDefined();
-    expect(VALID_VIP_TOKENS['AURA-VIP-BEAT-02']).toBeDefined();
-    expect(VALID_VIP_TOKENS['AURA-VIP-PRO-03']).toBeDefined();
-    expect(VALID_VIP_TOKENS['AURA-CONTEST-WINNER-1']).toBeDefined();
-    expect(VALID_VIP_TOKENS['AURA-CONTEST-WINNER-2']).toBeDefined();
-    expect(VALID_VIP_TOKENS['AURA-CONTEST-WINNER-3']).toBeDefined();
-    expect(VALID_VIP_TOKENS['AURA-MASTER-CREATOR-2026']).toBeDefined();
+describe('Security & OWNER Authorization Tests', () => {
+  it('should strictly authorize exact owner email and reject attacker substrings', () => {
+    // Authentic owner email
+    expect(isOwnerEmail('singapur.13omi@gmail.com')).toBe(true);
+    expect(isOwnerEmail('SINGAPUR.13OMI@GMAIL.COM')).toBe(true);
 
-    expect(VALID_VIP_TOKENS['AURA-VIP-FLOW-01'].durationDays).toBe(30);
-    expect(VALID_VIP_TOKENS['AURA-VIP-BEAT-02'].durationDays).toBe(30);
-    expect(VALID_VIP_TOKENS['AURA-VIP-PRO-03'].durationDays).toBe(30);
-    expect(VALID_VIP_TOKENS['AURA-CONTEST-WINNER-1'].durationDays).toBe(365);
-    expect(VALID_VIP_TOKENS['AURA-MASTER-CREATOR-2026'].durationDays).toBeGreaterThanOrEqual(365);
+    // Malicious attacker attempts exploiting substring checks
+    expect(isOwnerEmail('attacker13omi@gmail.com')).toBe(false);
+    expect(isOwnerEmail('13omi.fake@yahoo.com')).toBe(false);
+    expect(isOwnerEmail('admin-13omi@protonmail.com')).toBe(false);
+    expect(isOwnerEmail('random@gmail.com')).toBe(false);
+    expect(isOwnerEmail(null)).toBe(false);
+    expect(isOwnerEmail(undefined)).toBe(false);
+  });
+});
+
+describe('Server-Side Trial & Access Calculation Tests', () => {
+  it('should grant lifetime unlimited access to OWNER', () => {
+    const ownerAccess = calculateUserAccess({
+      role: 'OWNER',
+      email: 'singapur.13omi@gmail.com',
+    });
+    expect(ownerAccess.allowed).toBe(true);
+    expect(ownerAccess.isOwner).toBe(true);
+    expect(ownerAccess.daysRemaining).toBe(9999);
+  });
+
+  it('should grant active access to users within 30-day trial', () => {
+    const futureExpiry = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000);
+    const trialAccess = calculateUserAccess({
+      role: 'USER',
+      email: 'artist@test.sk',
+      subscriptionStatus: 'TRIALING',
+      trialEndsAt: futureExpiry,
+    });
+    expect(trialAccess.allowed).toBe(true);
+    expect(trialAccess.isTrialActive).toBe(true);
+    expect(trialAccess.daysRemaining).toBe(20);
+    expect(trialAccess.isOwner).toBe(false);
+  });
+
+  it('should deny access and require upgrade when trial has expired', () => {
+    const pastExpiry = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+    const expiredAccess = calculateUserAccess({
+      role: 'USER',
+      email: 'artist@test.sk',
+      subscriptionStatus: 'EXPIRED',
+      trialEndsAt: pastExpiry,
+    });
+    expect(expiredAccess.allowed).toBe(false);
+    expect(expiredAccess.isTrialActive).toBe(false);
+    expect(expiredAccess.reason).toBe('TRIAL_EXPIRED');
+  });
+
+  it('should grant active access to paid subscribers regardless of trial date', () => {
+    const pastExpiry = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const paidAccess = calculateUserAccess({
+      role: 'USER',
+      email: 'paying.artist@test.sk',
+      subscriptionStatus: 'ACTIVE',
+      plan: 'MONTHLY_PASS',
+      trialEndsAt: pastExpiry,
+    });
+    expect(paidAccess.allowed).toBe(true);
+    expect(paidAccess.isSubscriber).toBe(true);
   });
 });
