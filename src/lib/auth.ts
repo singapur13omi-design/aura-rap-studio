@@ -49,13 +49,19 @@ export const authOptions: NextAuthOptions = {
           throw new Error('INVALID_CREDENTIALS');
         }
 
+        const isOwner =
+          user.role === 'OWNER' ||
+          user.email === 'singapur.13omi@gmail.com' ||
+          user.email.includes('13omi') ||
+          user.email === (process.env.OWNER_EMAIL || '').toLowerCase().trim();
+
         return {
           id: user.id,
           email: user.email,
-          name: user.name || user.email.split('@')[0],
-          role: user.role,
-          plan: user.plan,
-          subscriptionStatus: user.subscriptionStatus,
+          name: isOwner ? '13OMI (Founder)' : user.name || user.email.split('@')[0],
+          role: isOwner ? 'OWNER' : user.role,
+          plan: isOwner ? 'OWNER' : user.plan,
+          subscriptionStatus: isOwner ? 'ACTIVE' : user.subscriptionStatus,
         };
       },
     }),
@@ -83,9 +89,12 @@ export const authOptions: NextAuthOptions = {
             select: { plan: true, subscriptionStatus: true, role: true },
           });
           if (freshUser) {
-            token.plan = freshUser.plan;
-            token.subscriptionStatus = freshUser.subscriptionStatus;
-            token.role = freshUser.role;
+            const isOwner =
+              freshUser.role === 'OWNER' ||
+              (token.email && (token.email === 'singapur.13omi@gmail.com' || (token.email as string).includes('13omi')));
+            token.plan = isOwner ? 'OWNER' : freshUser.plan;
+            token.subscriptionStatus = isOwner ? 'ACTIVE' : freshUser.subscriptionStatus;
+            token.role = isOwner ? 'OWNER' : freshUser.role;
           }
         } catch {
           // ignore db errors on jwt refresh

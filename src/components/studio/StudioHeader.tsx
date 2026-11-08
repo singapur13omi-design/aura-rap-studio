@@ -82,6 +82,12 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
 
   const plan = (session?.user as any)?.plan || 'FREE';
   const isSubscribed = (session?.user as any)?.subscriptionStatus === 'ACTIVE';
+  const isOwner =
+    (session?.user as any)?.role === 'OWNER' ||
+    plan === 'OWNER' ||
+    (session?.user as any)?.email === 'singapur.13omi@gmail.com' ||
+    (session?.user as any)?.email?.includes('13omi') ||
+    vipDaysRemaining === 999;
 
   // Metronome visual pulse calculation
   const secondsPerBeat = 60 / bpm;
@@ -254,24 +260,29 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
           </button>
         )}
 
-        {/* VIP Days Remaining Pill */}
-        {vipDaysRemaining !== undefined && vipDaysRemaining > 0 && (
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-400/10 border border-amber-400/30 text-amber-300 text-xs font-bold">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+        {/* Owner Lifetime Badge or VIP Days Remaining Pill */}
+        {isOwner ? (
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-brand-gold/20 border border-brand-gold text-brand-gold text-xs font-black tracking-wider uppercase shadow-[0_0_15px_rgba(200,164,93,0.3)]">
+            <Crown className="w-3.5 h-3.5 fill-current text-brand-gold" />
+            <span>13OMI OWNER</span>
+          </div>
+        ) : vipDaysRemaining !== undefined && vipDaysRemaining > 0 ? (
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand-electric/15 border border-brand-electric/40 text-brand-electric text-xs font-bold">
+            <Sparkles className="w-3.5 h-3.5 text-brand-electric animate-pulse" />
             <span>
-              {language === 'sk' ? `VIP: ${vipDaysRemaining} dní zdarma` : `VIP: ${vipDaysRemaining}d Free`}
+              {language === 'sk' ? `Free Trial: ${vipDaysRemaining} dní` : `Free Trial: ${vipDaysRemaining}d`}
             </span>
           </div>
-        )}
+        ) : null}
 
-        {/* Upgrade / Pricing Button */}
-        {plan !== 'STUDIO_PRO' && (
+        {/* Upgrade / Pricing Button (hidden for owner) */}
+        {!isOwner && plan !== 'ANNUAL_PASS' && plan !== 'STUDIO_PRO' && (
           <button
             onClick={onOpenPricing}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-aura-gold/20 to-amber-500/30 hover:from-aura-gold/30 hover:to-amber-500/40 border border-aura-gold/60 text-aura-gold hover:text-white text-xs font-extrabold tracking-wide transition-all shadow-[0_0_12px_rgba(255,215,0,0.25)]"
           >
             <Crown className="w-3.5 h-3.5 fill-current" />
-            <span className="hidden sm:inline">{t.upgradeToPro}</span>
+            <span className="hidden sm:inline">{language === 'sk' ? 'Cenník & Súťaž' : 'Pricing & Contest'}</span>
           </button>
         )}
 
@@ -290,14 +301,16 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
               </span>
               <span
                 className={`text-[9px] px-1.5 py-0.5 rounded font-black tracking-wider uppercase ${
-                  plan === 'STUDIO_PRO'
+                  isOwner
+                    ? 'bg-brand-gold/20 text-brand-gold border border-brand-gold'
+                    : plan === 'ANNUAL_PASS' || plan === 'STUDIO_PRO'
                     ? 'bg-amber-400/20 text-amber-300 border border-amber-400/40'
-                    : plan === 'PRO_ARTIST'
+                    : plan === 'MONTHLY_PASS' || plan === 'PRO_ARTIST'
                     ? 'bg-primary/20 text-primary border border-primary/40'
                     : 'bg-zinc-800 text-zinc-400'
                 }`}
               >
-                {plan === 'STUDIO_PRO' ? 'STUDIO' : plan === 'PRO_ARTIST' ? 'PRO' : 'FREE'}
+                {isOwner ? 'OWNER' : plan === 'ANNUAL_PASS' || plan === 'STUDIO_PRO' ? 'FOUNDER' : plan === 'MONTHLY_PASS' || plan === 'PRO_ARTIST' ? 'PRO' : 'TRIAL'}
               </span>
               <ChevronDown className="w-3 h-3 text-zinc-400" />
             </button>

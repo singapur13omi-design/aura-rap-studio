@@ -129,14 +129,19 @@ describe('AI Mixing Engine Tests', () => {
 });
 
 describe('VIP Beta Access Validation Tests', () => {
-  it('should recognize all 3 beta invite tokens and master admin pass', () => {
+  it('should recognize all 3 beta invite tokens, 3 contest winner tokens and master admin pass', () => {
     expect(VALID_VIP_TOKENS['AURA-VIP-FLOW-01']).toBeDefined();
     expect(VALID_VIP_TOKENS['AURA-VIP-BEAT-02']).toBeDefined();
     expect(VALID_VIP_TOKENS['AURA-VIP-PRO-03']).toBeDefined();
+    expect(VALID_VIP_TOKENS['AURA-CONTEST-WINNER-1']).toBeDefined();
+    expect(VALID_VIP_TOKENS['AURA-CONTEST-WINNER-2']).toBeDefined();
+    expect(VALID_VIP_TOKENS['AURA-CONTEST-WINNER-3']).toBeDefined();
     expect(VALID_VIP_TOKENS['AURA-MASTER-CREATOR-2026']).toBeDefined();
 
-    expect(VALID_VIP_TOKENS['AURA-VIP-FLOW-01'].durationDays).toBe(14);
-    expect(VALID_VIP_TOKENS['AURA-VIP-BEAT-02'].durationDays).toBe(14);
-    expect(VALID_VIP_TOKENS['AURA-VIP-PRO-03'].durationDays).toBe(14);
+    expect(VALID_VIP_TOKENS['AURA-VIP-FLOW-01'].durationDays).toBe(30);
+    expect(VALID_VIP_TOKENS['AURA-VIP-BEAT-02'].durationDays).toBe(30);
+    expect(VALID_VIP_TOKENS['AURA-VIP-PRO-03'].durationDays).toBe(30);
+    expect(VALID_VIP_TOKENS['AURA-CONTEST-WINNER-1'].durationDays).toBe(365);
+    expect(VALID_VIP_TOKENS['AURA-MASTER-CREATOR-2026'].durationDays).toBeGreaterThanOrEqual(365);
   });
 });

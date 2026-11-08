@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     const { planId } = body;
 
     const selectedPlan = SUBSCRIPTION_PLANS[planId];
-    if (!selectedPlan || selectedPlan.id === 'FREE') {
+    if (!selectedPlan || selectedPlan.id === 'FREE' || selectedPlan.id === 'FREE_TRIAL') {
       return NextResponse.json(
         { error: 'Neplatný plán predplatného / Invalid subscription plan' },
         { status: 400 }
@@ -87,7 +87,7 @@ export async function POST(req: Request) {
               },
               unit_amount: Math.round(selectedPlan.priceEur * 100),
               recurring: {
-                interval: 'month' as const,
+                interval: (selectedPlan.interval || 'month') as 'month' | 'year',
               },
             },
             quantity: 1,

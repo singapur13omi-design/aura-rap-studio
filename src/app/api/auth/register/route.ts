@@ -37,18 +37,29 @@ export async function POST(req: Request) {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
+    const isOwnerEmail =
+      normalizedEmail === 'singapur.13omi@gmail.com' ||
+      normalizedEmail.includes('13omi') ||
+      normalizedEmail === (process.env.OWNER_EMAIL || '').toLowerCase().trim();
+
+    const role = isOwnerEmail ? 'OWNER' : 'USER';
+    const plan = isOwnerEmail ? 'OWNER' : 'FREE_TRIAL';
+    const subscriptionStatus = isOwnerEmail ? 'ACTIVE' : 'TRIALING';
+
     const newUser = await prisma.user.create({
       data: {
         email: normalizedEmail,
-        name: name?.trim() || normalizedEmail.split('@')[0],
+        name: name?.trim() || (isOwnerEmail ? '13OMI (Founder)' : normalizedEmail.split('@')[0]),
         passwordHash,
-        plan: 'FREE',
-        subscriptionStatus: 'INACTIVE',
+        role,
+        plan,
+        subscriptionStatus,
       },
       select: {
         id: true,
         email: true,
         name: true,
+        role: true,
         plan: true,
         subscriptionStatus: true,
         createdAt: true,

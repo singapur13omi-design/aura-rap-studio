@@ -4,17 +4,22 @@ import React from 'react';
 import { LandingHero } from './LandingHero';
 import { HipHopCultureSection } from './HipHopCultureSection';
 import { StudioExperienceSection } from './StudioExperienceSection';
+import { ContestAndPricingSection } from './ContestAndPricingSection';
 import { StoryBehindTheSound } from './StoryBehindTheSound';
 import { LandingFooter } from './LandingFooter';
 
 interface LandingViewProps {
   onEnterStudio: () => void;
   onOpenTutorial: () => void;
+  onOpenPricing?: () => void;
+  onOpenAuth?: () => void;
 }
 
 export const LandingView: React.FC<LandingViewProps> = ({
   onEnterStudio,
   onOpenTutorial,
+  onOpenPricing,
+  onOpenAuth,
 }) => {
   const handleScrollToCulture = () => {
     const el = document.getElementById('hip-hop-culture');
@@ -42,10 +47,20 @@ export const LandingView: React.FC<LandingViewProps> = ({
       {/* 3. Studio Experience Section (Multitrack, Auto-Tune, 808s, Mastering) */}
       <StudioExperienceSection onEnterStudio={onEnterStudio} />
 
-      {/* 4. The Story Behind the Sound & 13OMI Founder Signature Section */}
+      {/* 4. Súťaž o 3 ročné licencie zdarma & Nová cenotvorba (30 dní free / 9.99€ / 60€) */}
+      <ContestAndPricingSection
+        onEnterStudio={onEnterStudio}
+        onOpenAuth={onOpenAuth}
+        onSelectPlan={(planId) => {
+          if (onOpenPricing) onOpenPricing();
+          else onEnterStudio();
+        }}
+      />
+
+      {/* 5. The Story Behind the Sound & 13OMI Founder Signature Section */}
       <StoryBehindTheSound onEnterStudio={onEnterStudio} />
 
-      {/* 5. Brand Signature Footer */}
+      {/* 6. Brand Signature Footer */}
       <LandingFooter
         onEnterStudio={onEnterStudio}
         onScrollToTop={handleScrollToTop}

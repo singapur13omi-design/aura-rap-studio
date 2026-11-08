@@ -556,6 +556,8 @@ function AuraRapStudioContent() {
         <LandingView
           onEnterStudio={() => setViewMode('STUDIO')}
           onOpenTutorial={() => setTutorialModalOpen(true)}
+          onOpenPricing={() => setPricingModalOpen(true)}
+          onOpenAuth={() => setAuthModalOpen(true)}
         />
 
         {/* Studio Masterclass Tutorial */}
