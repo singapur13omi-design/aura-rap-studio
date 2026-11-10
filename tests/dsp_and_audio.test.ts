@@ -8,7 +8,7 @@ import {
 } from '../src/lib/audio/autotune';
 import { calculateAIMix } from '../src/lib/ai/mixingAssistant';
 import { AudioTrackItem } from '../src/types';
-import { isOwnerEmail, calculateUserAccess } from '../src/lib/security';
+import { isOwnerEmail, calculateUserAccess, calculateVideoAccess } from '../src/lib/security';
 
 describe('Audio DSP and Saturation Tests', () => {
   it('should generate valid soft-saturation transfer curve', () => {
@@ -192,5 +192,46 @@ describe('Server-Side Trial & Access Calculation Tests', () => {
     });
     expect(paidAccess.allowed).toBe(true);
     expect(paidAccess.isSubscriber).toBe(true);
+  });
+});
+
+describe('AURA AI Video Studio Access & Credit Authorization Tests', () => {
+  it('should grant lifetime unlimited access and infinite credits to OWNER', () => {
+    const ownerVideo = calculateVideoAccess({
+      role: 'OWNER',
+      email: 'singapur.13omi@gmail.com',
+      hasVideoAccess: false,
+      videoCredits: 0,
+    });
+    expect(ownerVideo.allowed).toBe(true);
+    expect(ownerVideo.isOwner).toBe(true);
+    expect(ownerVideo.hasAddon).toBe(true);
+    expect(ownerVideo.credits).toBeGreaterThanOrEqual(999999);
+  });
+
+  it('should lock Video Studio for standard users without Video Add-on', () => {
+    const lockedUser = calculateVideoAccess({
+      role: 'USER',
+      email: 'rapper@street.sk',
+      hasVideoAccess: false,
+      videoCredits: 0,
+    });
+    expect(lockedUser.allowed).toBe(false);
+    expect(lockedUser.isOwner).toBe(false);
+    expect(lockedUser.hasAddon).toBe(false);
+    expect(lockedUser.credits).toBe(0);
+  });
+
+  it('should grant access to users who purchased the Video Studio Add-on with credits', () => {
+    const videoCustomer = calculateVideoAccess({
+      role: 'USER',
+      email: 'pro.creator@street.sk',
+      hasVideoAccess: true,
+      videoCredits: 100,
+    });
+    expect(videoCustomer.allowed).toBe(true);
+    expect(videoCustomer.isOwner).toBe(false);
+    expect(videoCustomer.hasAddon).toBe(true);
+    expect(videoCustomer.credits).toBe(100);
   });
 });

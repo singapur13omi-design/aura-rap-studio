@@ -19,6 +19,8 @@ model User {
   subscriptionStatus     String         @default("TRIALING") // TRIALING, ACTIVE, PAST_DUE, CANCELED, EXPIRED
   trialEndsAt            DateTime?
   aiUsageCount           Int            @default(0)
+  hasVideoAccess         Boolean        @default(false)
+  videoCredits           Int            @default(0)
   stripeCustomerId       String?        @unique
   stripeSubscriptionId   String?        @unique
   stripePriceId          String?
@@ -30,6 +32,9 @@ model User {
   projects               Project[]
   voiceProfiles          VoiceProfile[]
   vipRedemptions         VipRedemption[]
+  videoProjects          VideoProject[]
+  videoJobs              VideoGenerationJob[]
+  videoCreditTxs         VideoCreditTransaction[]
 }
 
 model Account {
@@ -247,4 +252,114 @@ model ContestSubmission {
   notes       String?
   createdAt   DateTime @default(now())
 }
+
+model VideoProject {
+  id              String            @id @default(uuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String            @default("Untitled Music Video")
+  artistName      String?
+  songTitle       String?
+  lyrics          String?           @db.Text
+  visualStyle     String            @default("DARK_TRAP")
+  aspectRatio     String            @default("16:9")
+  fps             Int               @default(30)
+  resolution      String            @default("1080p")
+  duration        Float             @default(0.0)
+  audioTrackUrl   String?
+  audioProjectId  String?
+  timelineData    String?           @db.Text
+  status          String            @default("DRAFT")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  scenes          VideoScene[]
+  assets          VideoAsset[]
+  exports         VideoExport[]
+}
+
+model VideoScene {
+  id              String        @id @default(uuid())
+  projectId       String
+  project         VideoProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sceneIndex      Int
+  title           String
+  sectionType     String
+  startTime       Float
+  endTime         Float
+  duration        Float
+  visualPrompt    String        @db.Text
+  negativePrompt  String?       @db.Text
+  cameraMovement  String?
+  lightingStyle   String?
+  status          String        @default("PLANNED")
+  activeVideoUrl  String?
+  generatedVideos VideoAsset[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model VideoAsset {
+  id              String        @id @default(uuid())
+  projectId       String
+  project         VideoProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sceneId         String?
+  scene           VideoScene?   @relation(fields: [sceneId], references: [id], onDelete: SetNull)
+  type            String        // AI_GENERATED, USER_UPLOAD, ENHANCED
+  sourceModel     String?
+  storageUrl      String
+  thumbnailUrl    String?
+  duration        Float         @default(5.0)
+  resolution      String?
+  width           Int?
+  height          Int?
+  fileSizeBytes   BigInt?
+  promptUsed      String?       @db.Text
+  generationCost  Int?
+  createdAt       DateTime      @default(now())
+}
+
+model VideoGenerationJob {
+  id              String        @id @default(uuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId       String
+  sceneId         String?
+  provider        String        @default("FAL_AI")
+  externalJobId   String?
+  jobType         String        @default("TEXT_TO_VIDEO")
+  prompt          String        @db.Text
+  status          String        @default("PENDING")
+  progress        Int           @default(0)
+  creditsDeducted Int           @default(0)
+  resultVideoUrl  String?
+  errorMessage    String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model VideoCreditTransaction {
+  id              String        @id @default(uuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount          Int
+  balanceAfter    Int
+  reason          String
+  referenceId     String?
+  createdAt       DateTime      @default(now())
+}
+
+model VideoExport {
+  id              String        @id @default(uuid())
+  projectId       String
+  project         VideoProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  format          String        @default("MP4")
+  resolution      String        @default("1080p")
+  fps             Int           @default(30)
+  aspectRatio     String        @default("16:9")
+  fileSizeBytes   BigInt?
+  downloadUrl     String
+  status          String        @default("COMPLETED")
+  createdAt       DateTime      @default(now())
+}
+
 

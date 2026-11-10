@@ -14,6 +14,7 @@ import {
   Download,
   Compass,
   FileText,
+  Clapperboard,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 
@@ -28,7 +29,8 @@ export type StudioTab =
   | 'BEAT_LIBRARY'
   | 'NOTEPAD'
   | 'MY_VOICE'
-  | 'EXPORT';
+  | 'EXPORT'
+  | 'VIDEO_STUDIO';
 
 interface StudioSidebarProps {
   currentTab: StudioTab;
@@ -55,6 +57,7 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
     { id: 'NOTEPAD' as StudioTab, label: t.navNotepad, icon: FileText },
     { id: 'MY_VOICE' as StudioTab, label: t.navMyVoice, icon: UserCheck },
     { id: 'EXPORT' as StudioTab, label: t.navExport, icon: Download },
+    { id: 'VIDEO_STUDIO' as StudioTab, label: t.navVideoStudio, icon: Clapperboard, badge: 'PRO' },
   ];
 
   return (

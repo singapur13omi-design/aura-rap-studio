@@ -159,3 +159,69 @@ export interface VoiceProfileData {
   referenceAudioUrl?: string;
   notes?: string;
 }
+
+export type VideoVisualStyle =
+  | 'DARK_TRAP'
+  | 'UNDERGROUND_STREET'
+  | 'LUXURY_RAP'
+  | 'CINEMATIC_HIPHOP'
+  | 'DRILL_STREET'
+  | 'EMOTIONAL_RAP'
+  | 'FUTURISTIC_RAP'
+  | 'OLD_SCHOOL_HIPHOP'
+  | 'NEON_CITY'
+  | 'DOCUMENTARY_STYLE';
+
+export interface VideoClipItem {
+  id: string;
+  name: string;
+  startTime: number; // timeline placement in seconds
+  duration: number; // clip duration in seconds
+  sourceStartTime?: number; // offset within source media
+  videoUrl: string;
+  thumbnailUrl?: string;
+  type: 'AI_SCENE' | 'USER_CLIP' | 'B_ROLL';
+  trackIndex: number; // 0 = main video track, 1 = overlay/b-roll
+  filterPreset?: string;
+  opacity?: number;
+  speed?: number;
+  textOverlay?: string;
+}
+
+export interface VideoSceneItem {
+  id: string;
+  sceneIndex: number;
+  title: string;
+  sectionType: string;
+  startTime: number;
+  endTime: number;
+  duration: number;
+  visualPrompt: string;
+  negativePrompt?: string;
+  cameraMovement?: string;
+  lightingStyle?: string;
+  status: 'PLANNED' | 'GENERATING' | 'READY' | 'FAILED';
+  activeVideoUrl?: string;
+}
+
+export interface VideoProjectData {
+  id: string;
+  userId?: string;
+  title: string;
+  artistName?: string;
+  songTitle?: string;
+  lyrics?: string;
+  visualStyle: VideoVisualStyle;
+  aspectRatio: '16:9' | '9:16' | '1:1';
+  fps: number;
+  resolution: string;
+  duration: number;
+  audioTrackUrl?: string;
+  audioProjectId?: string;
+  timelineData?: string;
+  status: 'DRAFT' | 'GENERATING' | 'READY' | 'EXPORTING' | 'COMPLETED';
+  scenes: VideoSceneItem[];
+  clips?: VideoClipItem[];
+  createdAt?: string;
+  updatedAt?: string;
+}

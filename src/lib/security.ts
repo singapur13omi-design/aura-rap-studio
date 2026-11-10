@@ -105,3 +105,39 @@ export function calculateUserAccess(user: {
     reason: 'TRIAL_EXPIRED',
   };
 }
+
+export interface VideoAccessCheck {
+  allowed: boolean;
+  isOwner: boolean;
+  hasAddon: boolean;
+  credits: number;
+}
+
+/**
+ * Server-side calculation of AURA AI Video Studio access privileges
+ * Ensures OWNER has lifetime unlimited access and non-owners need the Video Add-on.
+ */
+export function calculateVideoAccess(user: {
+  role?: string | null;
+  email?: string | null;
+  hasVideoAccess?: boolean | null;
+  videoCredits?: number | null;
+}): VideoAccessCheck {
+  const isOwner = user.role === 'OWNER' || isOwnerEmail(user.email);
+  if (isOwner) {
+    return {
+      allowed: true,
+      isOwner: true,
+      hasAddon: true,
+      credits: 999999,
+    };
+  }
+
+  const hasAddon = Boolean(user.hasVideoAccess);
+  return {
+    allowed: hasAddon,
+    isOwner: false,
+    hasAddon,
+    credits: user.videoCredits || 0,
+  };
+}

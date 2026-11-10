@@ -15,6 +15,8 @@ import { MasteringStudio } from '@/components/studio/MasteringStudio';
 import { ExportStudio } from '@/components/studio/ExportStudio';
 import { BeatLibrary } from '@/components/studio/BeatLibrary';
 import { RapNotepad } from '@/components/studio/RapNotepad';
+import { VideoStudioLockedPresentation } from '@/components/video/VideoStudioLockedPresentation';
+import { AuraVideoStudioWorkspace } from '@/components/video/AuraVideoStudioWorkspace';
 import { VoiceProfileSection } from '@/components/studio/VoiceProfileSection';
 import { AiMusicAssistant } from '@/components/studio/AiMusicAssistant';
 import { DashboardView } from '@/components/studio/DashboardView';
@@ -62,6 +64,8 @@ function AuraRapStudioContent() {
 
   // Auth & Subscription
   const { data: session } = useSession();
+  const isOwner = (session?.user as any)?.role === 'OWNER' || (session?.user?.email?.toLowerCase().trim() === 'singapur.13omi@gmail.com');
+  const [hasVideoStudioAccess, setHasVideoStudioAccess] = useState<boolean>(false);
   const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
   const [pricingModalOpen, setPricingModalOpen] = useState<boolean>(false);
   const [upgradeSuccessToast, setUpgradeSuccessToast] = useState<boolean>(false);
@@ -893,6 +897,27 @@ function AuraRapStudioContent() {
 
         {currentTab === 'EXPORT' && currentProject && (
           <ExportStudio project={currentProject} tracks={currentProject.tracks} />
+        )}
+
+        {currentTab === 'VIDEO_STUDIO' && (
+          isOwner || hasVideoStudioAccess ? (
+            <AuraVideoStudioWorkspace
+              isOwner={isOwner}
+              availableAudioProjects={projects.map((p) => ({
+                id: p.id,
+                title: p.title,
+                bpm: p.bpm,
+                genre: p.genre,
+              }))}
+              onExit={() => setCurrentTab('STUDIO')}
+            />
+          ) : (
+            <VideoStudioLockedPresentation
+              isOwner={isOwner}
+              onUnlockOrEnter={() => setHasVideoStudioAccess(true)}
+              onOpenPricing={() => setPricingModalOpen(true)}
+            />
+          )
         )}
       </div>
 

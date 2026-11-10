@@ -38,6 +38,7 @@ export const translations = {
     navNotepad: 'Rap Text & Rýmy',
     navMyVoice: 'Môj hlasový profil',
     navExport: 'Export & Stems',
+    navVideoStudio: 'AI Video Studio',
     audioEngineStatus: 'Audio Engine',
     aiProducerActive: 'Aktívny',
 
@@ -331,6 +332,7 @@ export const translations = {
     navNotepad: 'Lyrics & Rhymes',
     navMyVoice: 'My Voice',
     navExport: 'Export Studio',
+    navVideoStudio: 'AI Video Studio',
     audioEngineStatus: 'Audio Engine',
     aiProducerActive: 'Active',
 
