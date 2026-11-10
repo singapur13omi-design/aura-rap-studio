@@ -14,6 +14,7 @@ import { AutoTuneModule } from '@/components/studio/AutoTuneModule';
 import { MasteringStudio } from '@/components/studio/MasteringStudio';
 import { ExportStudio } from '@/components/studio/ExportStudio';
 import { BeatLibrary } from '@/components/studio/BeatLibrary';
+import { RapNotepad } from '@/components/studio/RapNotepad';
 import { VoiceProfileSection } from '@/components/studio/VoiceProfileSection';
 import { AiMusicAssistant } from '@/components/studio/AiMusicAssistant';
 import { DashboardView } from '@/components/studio/DashboardView';
@@ -23,6 +24,7 @@ import { VipGatekeeper } from '@/components/vip/VipGatekeeper';
 import { StudioMasterclassModal } from '@/components/tutorial/StudioMasterclassModal';
 import { LandingView } from '@/components/landing/LandingView';
 import { checkVipAccess, redeemVipCodeOnServer } from '@/lib/vipAccess';
+import { saveTrackAudioLocally, getTrackAudioLocally } from '@/lib/audio/offlineStorage';
 
 import { MultitrackAudioEngine } from '@/lib/audio/engine';
 import { generateHipHopBeat } from '@/lib/audio/synthesizer';
@@ -248,16 +250,50 @@ function AuraRapStudioContent() {
     if (proj) {
       const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
       const ctx = new AudioCtxClass();
-      const beatTrack = proj.tracks.find((trk) => trk.layerType === 'BEAT' && !trk.audioBuffer);
+
+      // 1. Synthesize procedural beat if not loaded and no assetUrl
+      const beatTrack = proj.tracks.find((trk) => trk.layerType === 'BEAT' && !trk.audioBuffer && !trk.assetUrl);
       if (beatTrack) {
-        const { fullBeat } = await generateHipHopBeat(ctx, {
-          genre: proj.genre,
-          bpm: proj.bpm,
-          keyScale: proj.keyScale,
-          durationSeconds: 32,
-        });
-        beatTrack.audioBuffer = fullBeat;
-        beatTrack.duration = fullBeat.duration;
+        try {
+          const { fullBeat } = await generateHipHopBeat(ctx, {
+            genre: proj.genre,
+            bpm: proj.bpm,
+            keyScale: proj.keyScale,
+            durationSeconds: 32,
+          });
+          beatTrack.audioBuffer = fullBeat;
+          beatTrack.duration = fullBeat.duration;
+        } catch (synthErr) {
+          console.warn('Could not synthesize procedural beat:', synthErr);
+        }
+      }
+
+      // 2. Restore recorded / imported vocals from local IndexedDB cache or cloud assetUrl
+      for (const trk of proj.tracks) {
+        if (!trk.audioBuffer) {
+          try {
+            // First check local IndexedDB
+            const localBlob = await getTrackAudioLocally(trk.id);
+            if (localBlob) {
+              const arrayBuf = await localBlob.arrayBuffer();
+              trk.audioBuffer = await ctx.decodeAudioData(arrayBuf);
+              trk.duration = trk.audioBuffer.duration;
+              continue;
+            }
+
+            // Fallback to cloud assetUrl
+            if (trk.assetUrl) {
+              const res = await fetch(trk.assetUrl);
+              if (res.ok) {
+                const arrayBuf = await res.arrayBuffer();
+                trk.audioBuffer = await ctx.decodeAudioData(arrayBuf);
+                trk.duration = trk.audioBuffer.duration;
+              }
+            }
+          } catch (restoreErr) {
+            console.warn(`Could not restore audio for track ${trk.id}:`, restoreErr);
+          }
+        }
       }
 
       setCurrentProject(proj);
@@ -425,7 +461,7 @@ function AuraRapStudioContent() {
     setRecordingModalOpen(true);
   };
 
-  const handleSaveRecording = (
+  const handleSaveRecording = async (
     trackId: string,
     result: RecordingResult,
     latencyOffsetSec: number
@@ -433,15 +469,51 @@ function AuraRapStudioContent() {
     if (!currentProject) return;
     const adjustedStart = Math.max(0, currentTime - latencyOffsetSec);
 
+    // 1. Immediately cache in IndexedDB offline storage
+    await saveTrackAudioLocally(trackId, result.blob);
+
+    // 2. Update React memory buffer for instant zero-latency playback
     handleUpdateTrack(trackId, {
       audioBuffer: result.audioBuffer,
       duration: result.duration,
       startTime: adjustedStart,
     });
+
+    // 3. Upload to cloud / server storage in background
+    try {
+      const formData = new FormData();
+      formData.append('file', result.blob, `track_${trackId}.webm`);
+      formData.append('trackId', trackId);
+
+      const res = await fetch('/api/audio/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        handleUpdateTrack(trackId, { assetUrl: data.url });
+        await fetch('/api/tracks', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: trackId,
+            assetUrl: data.url,
+            startTime: adjustedStart,
+            duration: result.duration,
+          }),
+        });
+      }
+    } catch (err) {
+      console.warn('Background upload note (audio is safely cached in IndexedDB):', err);
+    }
   };
 
   const handleImportAudio = async (trackId: string, file: File) => {
     try {
+      // 1. Cache raw file in IndexedDB
+      await saveTrackAudioLocally(trackId, file);
+
+      // 2. Decode audio buffer for immediate playback
       const arrayBuffer = await file.arrayBuffer();
       const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
       const ctx = new AudioCtxClass();
@@ -452,6 +524,32 @@ function AuraRapStudioContent() {
         audioBuffer: decoded,
         duration: decoded.duration,
       });
+
+      // 3. Background upload
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('trackId', trackId);
+
+      fetch('/api/audio/upload', {
+        method: 'POST',
+        body: formData,
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.success && data.url) {
+            handleUpdateTrack(trackId, { assetUrl: data.url });
+            fetch('/api/tracks', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: trackId,
+                assetUrl: data.url,
+                duration: decoded.duration,
+              }),
+            }).catch(console.error);
+          }
+        })
+        .catch(console.error);
     } catch (err) {
       console.error('Audio import failed:', err);
       alert(language === 'sk' ? 'Súbor sa nepodarilo dekódovať. Skontroluj formát (WAV, MP3, FLAC).' : 'Could not decode audio file.');
@@ -772,6 +870,15 @@ function AuraRapStudioContent() {
           <BeatLibrary onLoadBeatToTimeline={handleAddBeatTrack} />
         )}
 
+        {currentTab === 'NOTEPAD' && (
+          <div className="flex-1 bg-surface-300 p-6 overflow-hidden flex flex-col">
+            <RapNotepad
+              projectId={currentProject?.id || 'aura_default'}
+              isPlaying={isPlaying}
+            />
+          </div>
+        )}
+
         {currentTab === 'MY_VOICE' && currentProject && (
           <VoiceProfileSection
             currentFX={currentProject.tracks[0]?.effects}
@@ -794,6 +901,7 @@ function AuraRapStudioContent() {
           isOpen={recordingModalOpen}
           onClose={() => setRecordingModalOpen(false)}
           targetTrack={currentProject.tracks.find((trk) => trk.id === recordingTargetTrackId)}
+          projectId={currentProject.id}
           onSaveRecording={handleSaveRecording}
         />
       )}

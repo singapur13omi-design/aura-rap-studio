@@ -10,16 +10,19 @@ import {
   Headphones,
   AlertTriangle,
   Circle,
+  FileText,
 } from 'lucide-react';
 import { VocalRecorder, RecordingResult } from '@/lib/audio/recorder';
 import { formatTime } from '@/lib/utils';
 import { AudioTrackItem } from '@/types';
 import { useI18n } from '@/lib/i18n';
+import { RapNotepad } from './RapNotepad';
 
 interface RecordingModalProps {
   isOpen: boolean;
   onClose: () => void;
   targetTrack?: AudioTrackItem;
+  projectId?: string;
   onSaveRecording: (trackId: string, result: RecordingResult, latencyOffsetSec: number) => void;
 }
 
@@ -27,9 +30,10 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
   isOpen,
   onClose,
   targetTrack,
+  projectId,
   onSaveRecording,
 }) => {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [recorder, setRecorder] = useState<VocalRecorder | null>(null);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
@@ -37,6 +41,7 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recordingSeconds, setRecordingSeconds] = useState<number>(0);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [showNotepad, setShowNotepad] = useState<boolean>(false);
 
   const [monitoringEnabled, setMonitoringEnabled] = useState<boolean>(false);
   const [latencyMs, setLatencyMs] = useState<number>(45);
@@ -149,7 +154,7 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="w-full max-w-xl bg-surface-200 border border-surface-50/40 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+      <div className={`w-full ${showNotepad ? 'max-w-5xl' : 'max-w-xl'} bg-surface-200 border border-surface-50/40 rounded-2xl shadow-2xl overflow-hidden flex flex-col transition-all duration-200`}>
         {/* Modal Header */}
         <div className="px-6 py-4 bg-surface-100 border-b border-surface-50/30 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -163,16 +168,30 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-surface-50"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowNotepad(!showNotepad)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
+                showNotepad
+                  ? 'bg-aura-purple/20 border-aura-purple text-aura-purple shadow-glow-purple'
+                  : 'bg-surface-50 border-surface-50/50 text-gray-300 hover:text-white'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>{showNotepad ? (language === 'sk' ? 'Skryť rýmy' : 'Hide lyrics') : (language === 'sk' ? 'Text & Rýmy' : 'Lyrics & Rhymes')}</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-surface-50"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-6">
+        <div className={`p-6 ${showNotepad ? 'grid grid-cols-1 lg:grid-cols-12 gap-6' : 'space-y-6'}`}>
+          <div className={`${showNotepad ? 'lg:col-span-7' : ''} space-y-6`}>
           <div className="h-44 bg-black/70 rounded-xl border border-surface-50/30 flex flex-col items-center justify-center relative overflow-hidden">
             {countdown !== null ? (
               <div className="text-6xl font-black text-aura-blue animate-pulse">
@@ -281,6 +300,17 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
               />
             </div>
           </div>
+          </div>
+
+          {showNotepad && (
+            <div className="lg:col-span-5 h-[360px] flex flex-col">
+              <RapNotepad
+                projectId={projectId || 'default'}
+                isPlaying={isRecording}
+                isEmbeddedInModal={true}
+              />
+            </div>
+          )}
         </div>
 
         {/* Modal Footer */}

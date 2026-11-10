@@ -8,6 +8,10 @@ import {
   HardDrive,
   FileCode,
   CheckCircle2,
+  Share2,
+  ExternalLink,
+  Check,
+  Sparkles,
 } from 'lucide-react';
 import { AudioTrackItem, ProjectData } from '@/types';
 import { renderOfflineMixdown, audioBufferToWav } from '@/lib/audio/export';
@@ -24,6 +28,19 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ project, tracks }) =
   const [selectedBitDepth, setSelectedBitDepth] = useState<16 | 24 | 32>(24);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [exportMessage, setExportMessage] = useState<string>('');
+  const [copiedLink, setCopiedLink] = useState<boolean>(false);
+
+  const shareUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/track/${project.id}`
+    : `/track/${project.id}`;
+
+  const handleCopyShareLink = () => {
+    if (typeof window !== 'undefined') {
+      navigator.clipboard.writeText(shareUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
+  };
 
   const triggerDownload = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
@@ -152,6 +169,41 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ project, tracks }) =
         >
           <FileCode className="w-3.5 h-3.5 text-aura-gold" /> {t.backupJson}
         </button>
+      </div>
+
+      {/* Public Share Page Card */}
+      <div className="bg-gradient-to-r from-aura-purple/15 via-surface-200 to-aura-blue/15 border border-aura-purple/30 p-5 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg">
+        <div className="space-y-1 text-center md:text-left">
+          <div className="flex items-center justify-center md:justify-start gap-2 text-aura-purple font-mono text-xs font-bold uppercase tracking-wider">
+            <Share2 className="w-4 h-4" />
+            <span>{language === 'sk' ? 'Verejná stránka na počúvanie & zdieľanie' : 'Public Track Listening Page'}</span>
+          </div>
+          <p className="text-xs text-gray-300 max-w-xl">
+            {language === 'sk'
+              ? 'Tento projekt má vygenerovanú vlastnú verejnú stránku s waveform prehrávačom pre fanúšikov a sociálne siete.'
+              : 'This project has a dedicated public page with a waveform player ready for sharing on social networks.'}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={handleCopyShareLink}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-surface-100 hover:bg-surface-50 text-xs font-bold text-white border border-surface-50/50 transition-all shadow-md"
+          >
+            {copiedLink ? <Check className="w-3.5 h-3.5 text-aura-green" /> : <Share2 className="w-3.5 h-3.5 text-aura-blue" />}
+            <span>{copiedLink ? (language === 'sk' ? 'Odkaz skopírovaný!' : 'Link copied!') : (language === 'sk' ? 'Kopírovať odkaz' : 'Copy Link')}</span>
+          </button>
+
+          <a
+            href={shareUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-aura-blue to-aura-purple text-black font-extrabold text-xs shadow-glow hover:opacity-95 transition-all"
+          >
+            <span>{language === 'sk' ? 'Otvoriť prehrávač' : 'Open Player'}</span>
+            <ExternalLink className="w-3.5 h-3.5 text-black" />
+          </a>
+        </div>
       </div>
 
       {/* Quality & Format */}

@@ -13,6 +13,7 @@ import {
   UserCheck,
   Download,
   Compass,
+  FileText,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 
@@ -25,6 +26,7 @@ export type StudioTab =
   | 'AUTOTUNE'
   | 'MASTERING'
   | 'BEAT_LIBRARY'
+  | 'NOTEPAD'
   | 'MY_VOICE'
   | 'EXPORT';
 
@@ -50,6 +52,7 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
     { id: 'AUTOTUNE' as StudioTab, label: t.navAutoTune, icon: AudioWaveform },
     { id: 'MASTERING' as StudioTab, label: t.navMastering, icon: Disc3, badge: 'LUFS' },
     { id: 'BEAT_LIBRARY' as StudioTab, label: t.navBeatLibrary, icon: Flame },
+    { id: 'NOTEPAD' as StudioTab, label: t.navNotepad, icon: FileText },
     { id: 'MY_VOICE' as StudioTab, label: t.navMyVoice, icon: UserCheck },
     { id: 'EXPORT' as StudioTab, label: t.navExport, icon: Download },
   ];
