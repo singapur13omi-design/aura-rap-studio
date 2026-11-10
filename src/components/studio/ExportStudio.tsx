@@ -12,6 +12,8 @@ import {
   ExternalLink,
   Check,
   Sparkles,
+  Clapperboard,
+  ArrowRight,
 } from 'lucide-react';
 import { AudioTrackItem, ProjectData } from '@/types';
 import { renderOfflineMixdown, audioBufferToWav } from '@/lib/audio/export';
@@ -20,9 +22,10 @@ import { useI18n } from '@/lib/i18n';
 interface ExportStudioProps {
   project: ProjectData;
   tracks: AudioTrackItem[];
+  onNavigateToVideoStudio?: () => void;
 }
 
-export const ExportStudio: React.FC<ExportStudioProps> = ({ project, tracks }) => {
+export const ExportStudio: React.FC<ExportStudioProps> = ({ project, tracks, onNavigateToVideoStudio }) => {
   const { t, language } = useI18n();
   const [selectedFormat, setSelectedFormat] = useState<'WAV' | 'MP3'>('WAV');
   const [selectedBitDepth, setSelectedBitDepth] = useState<16 | 24 | 32>(24);
@@ -204,6 +207,35 @@ export const ExportStudio: React.FC<ExportStudioProps> = ({ project, tracks }) =
             <ExternalLink className="w-3.5 h-3.5 text-black" />
           </a>
         </div>
+      </div>
+
+      {/* Create Video Clip CTA Banner */}
+      <div className="bg-gradient-to-r from-[#286BFF]/20 via-[#713BFF]/20 to-[#C8A45D]/20 border border-[#713BFF]/50 p-5 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#713BFF]/30 text-[#C8A45D] flex items-center justify-center font-bold shrink-0">
+            <Clapperboard className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="font-bold text-white text-sm">
+              {language === 'sk' ? 'Vytvoriť videoklip k tejto skladbe v AURA AI VIDEO STUDIO' : 'Create Music Video for this track in AURA AI VIDEO STUDIO'}
+            </h4>
+            <p className="text-xs text-gray-300">
+              {language === 'sk'
+                ? 'Prenes tento track, tempo BPM a text priamo do nového filmového editora a vytvor k nemu filmové zábery.'
+                : 'Send this audio track, BPM, and lyrics directly into the new AI Video Studio to create cinematic scenes.'}
+            </p>
+          </div>
+        </div>
+
+        {onNavigateToVideoStudio && (
+          <button
+            onClick={onNavigateToVideoStudio}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#286BFF] via-[#713BFF] to-[#C8A45D] text-white font-extrabold text-xs shadow-glow hover:scale-105 transition-all shrink-0"
+          >
+            <span>{language === 'sk' ? 'Otvoriť Video Studio' : 'Open Video Studio'}</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Quality & Format */}

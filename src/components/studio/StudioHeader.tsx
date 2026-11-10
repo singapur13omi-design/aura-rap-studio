@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { formatTime, formatBarsBeats } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
+import { isOwnerEmail } from '@/lib/security';
 
 interface StudioHeaderProps {
   projectTitle: string;
@@ -85,8 +86,7 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
   const isOwner =
     (session?.user as any)?.role === 'OWNER' ||
     plan === 'OWNER' ||
-    (session?.user as any)?.email === 'singapur.13omi@gmail.com' ||
-    (session?.user as any)?.email?.includes('13omi') ||
+    isOwnerEmail((session?.user as any)?.email) ||
     vipDaysRemaining === 999;
 
   // Metronome visual pulse calculation

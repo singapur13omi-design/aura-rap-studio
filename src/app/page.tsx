@@ -896,7 +896,11 @@ function AuraRapStudioContent() {
         )}
 
         {currentTab === 'EXPORT' && currentProject && (
-          <ExportStudio project={currentProject} tracks={currentProject.tracks} />
+          <ExportStudio
+            project={currentProject}
+            tracks={currentProject.tracks}
+            onNavigateToVideoStudio={() => setCurrentTab('VIDEO_STUDIO')}
+          />
         )}
 
         {currentTab === 'VIDEO_STUDIO' && (
