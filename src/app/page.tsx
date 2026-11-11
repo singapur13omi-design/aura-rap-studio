@@ -26,7 +26,12 @@ import { VipGatekeeper } from '@/components/vip/VipGatekeeper';
 import { StudioMasterclassModal } from '@/components/tutorial/StudioMasterclassModal';
 import { LandingView } from '@/components/landing/LandingView';
 import { checkVipAccess, redeemVipCodeOnServer } from '@/lib/vipAccess';
-import { saveTrackAudioLocally, getTrackAudioLocally } from '@/lib/audio/offlineStorage';
+import {
+  saveTrackAudioLocally,
+  getTrackAudioLocally,
+  updateTrackSyncStatus,
+  listPendingSyncTracks,
+} from '@/lib/audio/offlineStorage';
 
 import { MultitrackAudioEngine } from '@/lib/audio/engine';
 import { generateHipHopBeat } from '@/lib/audio/synthesizer';
@@ -52,6 +57,7 @@ function AuraRapStudioContent() {
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [masterPeakDb, setMasterPeakDb] = useState<number>(-60);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<'SYNCED' | 'SYNCING' | 'ERROR' | 'LOCAL'>('SYNCED');
 
   // Creative Mode: LANDING (Public Culture & 13OMI Story) vs STUDIO (DAW Workspace)
   const [viewMode, setViewMode] = useState<'LANDING' | 'STUDIO'>('LANDING');
@@ -272,27 +278,31 @@ function AuraRapStudioContent() {
         }
       }
 
-      // 2. Restore recorded / imported vocals from local IndexedDB cache or cloud assetUrl
+      // 2. Restore recorded / imported vocals from local IndexedDB cache or cloud
       for (const trk of proj.tracks) {
         if (!trk.audioBuffer) {
           try {
+            let arrayBuf: ArrayBuffer | null = null;
             // First check local IndexedDB
             const localBlob = await getTrackAudioLocally(trk.id);
             if (localBlob) {
-              const arrayBuf = await localBlob.arrayBuffer();
-              trk.audioBuffer = await ctx.decodeAudioData(arrayBuf);
-              trk.duration = trk.audioBuffer.duration;
-              continue;
+              arrayBuf = await localBlob.arrayBuffer();
+            } else {
+              // Fallback to cloud audio endpoint: /api/audio/track/${trk.id} or trk.assetUrl
+              const cloudUrl = trk.assetUrl || `/api/audio/track/${trk.id}`;
+              const res = await fetch(cloudUrl);
+              if (res.ok) {
+                const fetchedBuffer = await res.arrayBuffer();
+                arrayBuf = fetchedBuffer;
+                // Resiliently cache into local IndexedDB for future instant offline access
+                const restoredBlob = new Blob([fetchedBuffer.slice(0)], { type: trk.mimeType || 'audio/wav' });
+                await saveTrackAudioLocally(trk.id, restoredBlob, 'SYNCED');
+              }
             }
 
-            // Fallback to cloud assetUrl
-            if (trk.assetUrl) {
-              const res = await fetch(trk.assetUrl);
-              if (res.ok) {
-                const arrayBuf = await res.arrayBuffer();
-                trk.audioBuffer = await ctx.decodeAudioData(arrayBuf);
-                trk.duration = trk.audioBuffer.duration;
-              }
+            if (arrayBuf) {
+              trk.audioBuffer = await ctx.decodeAudioData(arrayBuf.slice(0));
+              trk.duration = trk.audioBuffer.duration;
             }
           } catch (restoreErr) {
             console.warn(`Could not restore audio for track ${trk.id}:`, restoreErr);
@@ -338,8 +348,22 @@ function AuraRapStudioContent() {
             startTime: trk.startTime,
             duration: trk.duration,
             effects: trk.effects,
+            assetUrl: trk.assetUrl,
           }),
         });
+      }
+
+      // Snapshot a version for safe rollbacks and revision history
+      try {
+        await fetch(`/api/projects/${currentProject.id}/versions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            versionName: `Verzia ${new Date().toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`,
+          }),
+        });
+      } catch (verErr) {
+        console.warn('Could not save version snapshot:', verErr);
       }
     } catch (err) {
       console.error('Failed to save project:', err);
@@ -465,6 +489,51 @@ function AuraRapStudioContent() {
     setRecordingModalOpen(true);
   };
 
+  const uploadTrackToCloud = async (trackId: string, blob: Blob, fileName?: string) => {
+    setCloudSyncStatus('SYNCING');
+    try {
+      const formData = new FormData();
+      formData.append('file', blob, fileName || `track_${trackId}.webm`);
+      formData.append('trackId', trackId);
+      if (currentProject?.id) {
+        formData.append('projectId', currentProject.id);
+      }
+
+      const res = await fetch('/api/audio/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        handleUpdateTrack(trackId, { assetUrl: data.url });
+        await updateTrackSyncStatus(trackId, 'SYNCED');
+        setCloudSyncStatus('SYNCED');
+        return data.url;
+      } else {
+        throw new Error(data.error || 'Upload error');
+      }
+    } catch (err: any) {
+      console.warn('Cloud audio sync error for track:', trackId, err);
+      await updateTrackSyncStatus(trackId, 'ERROR', err?.message);
+      setCloudSyncStatus('ERROR');
+      return null;
+    }
+  };
+
+  const handleRetrySync = async () => {
+    if (!currentProject) return;
+    setCloudSyncStatus('SYNCING');
+    try {
+      const pending = await listPendingSyncTracks();
+      for (const item of pending) {
+        await uploadTrackToCloud(item.trackId, item.blob);
+      }
+      setCloudSyncStatus('SYNCED');
+    } catch {
+      setCloudSyncStatus('ERROR');
+    }
+  };
+
   const handleSaveRecording = async (
     trackId: string,
     result: RecordingResult,
@@ -474,7 +543,7 @@ function AuraRapStudioContent() {
     const adjustedStart = Math.max(0, currentTime - latencyOffsetSec);
 
     // 1. Immediately cache in IndexedDB offline storage
-    await saveTrackAudioLocally(trackId, result.blob);
+    await saveTrackAudioLocally(trackId, result.blob, 'SYNCING');
 
     // 2. Update React memory buffer for instant zero-latency playback
     handleUpdateTrack(trackId, {
@@ -483,39 +552,26 @@ function AuraRapStudioContent() {
       startTime: adjustedStart,
     });
 
-    // 3. Upload to cloud / server storage in background
-    try {
-      const formData = new FormData();
-      formData.append('file', result.blob, `track_${trackId}.webm`);
-      formData.append('trackId', trackId);
-
-      const res = await fetch('/api/audio/upload', {
-        method: 'POST',
-        body: formData,
+    // 3. Resilient cloud upload
+    const uploadedUrl = await uploadTrackToCloud(trackId, result.blob, `track_${trackId}.webm`);
+    if (uploadedUrl) {
+      await fetch('/api/tracks', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: trackId,
+          assetUrl: uploadedUrl,
+          startTime: adjustedStart,
+          duration: result.duration,
+        }),
       });
-      const data = await res.json();
-      if (data.success && data.url) {
-        handleUpdateTrack(trackId, { assetUrl: data.url });
-        await fetch('/api/tracks', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: trackId,
-            assetUrl: data.url,
-            startTime: adjustedStart,
-            duration: result.duration,
-          }),
-        });
-      }
-    } catch (err) {
-      console.warn('Background upload note (audio is safely cached in IndexedDB):', err);
     }
   };
 
   const handleImportAudio = async (trackId: string, file: File) => {
     try {
       // 1. Cache raw file in IndexedDB
-      await saveTrackAudioLocally(trackId, file);
+      await saveTrackAudioLocally(trackId, file, 'SYNCING');
 
       // 2. Decode audio buffer for immediate playback
       const arrayBuffer = await file.arrayBuffer();
@@ -529,31 +585,19 @@ function AuraRapStudioContent() {
         duration: decoded.duration,
       });
 
-      // 3. Background upload
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('trackId', trackId);
-
-      fetch('/api/audio/upload', {
-        method: 'POST',
-        body: formData,
-      })
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.success && data.url) {
-            handleUpdateTrack(trackId, { assetUrl: data.url });
-            fetch('/api/tracks', {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                id: trackId,
-                assetUrl: data.url,
-                duration: decoded.duration,
-              }),
-            }).catch(console.error);
-          }
-        })
-        .catch(console.error);
+      // 3. Resilient cloud upload
+      const uploadedUrl = await uploadTrackToCloud(trackId, file, file.name);
+      if (uploadedUrl) {
+        await fetch('/api/tracks', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: trackId,
+            assetUrl: uploadedUrl,
+            duration: decoded.duration,
+          }),
+        }).catch(console.error);
+      }
     } catch (err) {
       console.error('Audio import failed:', err);
       alert(language === 'sk' ? 'Súbor sa nepodarilo dekódovať. Skontroluj formát (WAV, MP3, FLAC).' : 'Could not decode audio file.');
@@ -719,6 +763,8 @@ function AuraRapStudioContent() {
         metronomeOn={currentProject?.metronomeOn ?? false}
         masterPeakDb={masterPeakDb}
         isSaving={isSaving}
+        cloudSyncStatus={cloudSyncStatus}
+        onRetrySync={handleRetrySync}
         onPlay={handlePlay}
         onPause={handlePause}
         onStop={handleStop}

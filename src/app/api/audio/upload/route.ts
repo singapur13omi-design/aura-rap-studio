@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 import { isOwnerEmail } from '@/lib/security';
-import fs from 'fs';
-import path from 'path';
+import crypto from 'crypto';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
@@ -14,6 +16,7 @@ export async function POST(req: Request) {
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
     const trackId = (formData.get('trackId') as string) || '';
+    const projectId = (formData.get('projectId') as string) || '';
 
     if (!file) {
       return NextResponse.json({ success: false, error: 'Chýba audio súbor / Missing audio file' }, { status: 400 });
@@ -28,50 +31,96 @@ export async function POST(req: Request) {
       );
     }
 
+    // Verify track and ownership if trackId is provided
+    let existingTrack = null;
+    if (trackId) {
+      existingTrack = await prisma.audioTrack.findUnique({
+        where: { id: trackId },
+        include: { project: true },
+      });
+
+      if (existingTrack) {
+        if (existingTrack.project.userId && existingTrack.project.userId !== userId && !isOwner) {
+          return NextResponse.json(
+            { success: false, error: 'PRÍSTUP ODMIETNUTÝ: Nemáte oprávnenie nahrávať do tohto projektu' },
+            { status: 403 }
+          );
+        }
+      }
+    }
+
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-
+    const checksum = crypto.createHash('sha256').update(buffer).digest('hex');
+    const mimeType = file.type || 'audio/wav';
     const ext = file.name.split('.').pop()?.toLowerCase() || 'wav';
-    const safeName = `track_${trackId || Date.now()}_${Date.now()}.${ext}`;
+    const safeName = `track_${trackId || 'new'}_${Date.now()}.${ext}`;
 
-    // 1. If Vercel Blob storage is configured, upload to cloud
+    let storageType = 'POSTGRES_BYTEA';
+    let assetUrl = `/api/audio/track/${trackId}`;
+
+    // 1. If Vercel Blob storage is configured, attempt upload to Vercel Blob
     if (process.env.BLOB_READ_WRITE_TOKEN) {
       try {
         const { put } = await import('@vercel/blob');
         const blob = await put(`recordings/${safeName}`, buffer, {
           access: 'public',
-          contentType: file.type || 'audio/wav',
+          contentType: mimeType,
         });
-        return NextResponse.json({
-          success: true,
-          url: blob.url,
-          storage: 'VERCEL_BLOB',
-          size: file.size,
-        });
+        storageType = 'VERCEL_BLOB';
+        assetUrl = blob.url;
       } catch (blobErr: any) {
-        console.warn('Vercel Blob upload failed, falling back to local/static storage:', blobErr.message);
+        console.warn('Vercel Blob upload failed, falling back to PostgreSQL Bytea cloud storage:', blobErr.message);
       }
     }
 
-    // 2. Local filesystem storage fallback (development / self-hosted)
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'audio');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    // 2. If trackId exists in DB, persist audio data and track metadata
+    if (existingTrack) {
+      if (storageType === 'POSTGRES_BYTEA') {
+        await prisma.audioTrackBlob.upsert({
+          where: { trackId: existingTrack.id },
+          create: {
+            trackId: existingTrack.id,
+            mimeType,
+            size: buffer.length,
+            data: buffer,
+            checksum,
+          },
+          update: {
+            mimeType,
+            size: buffer.length,
+            data: buffer,
+            checksum,
+          },
+        });
+        assetUrl = `/api/audio/track/${existingTrack.id}`;
+      }
+
+      await prisma.audioTrack.update({
+        where: { id: existingTrack.id },
+        data: {
+          assetUrl,
+          storageType,
+          fileSize: buffer.length,
+          mimeType,
+          audioChecksum: checksum,
+        },
+      });
     }
-
-    const filePath = path.join(uploadDir, safeName);
-    fs.writeFileSync(filePath, buffer);
-
-    const publicUrl = `/uploads/audio/${safeName}`;
 
     return NextResponse.json({
       success: true,
-      url: publicUrl,
-      storage: 'LOCAL_PUBLIC',
-      size: file.size,
+      trackId: trackId || undefined,
+      url: assetUrl,
+      storage: storageType,
+      size: buffer.length,
+      checksum,
     });
   } catch (err: any) {
     console.error('Audio upload error:', err);
-    return NextResponse.json({ success: false, error: err.message || 'Chyba pri ukladaní audia' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: err.message || 'Chyba pri ukladaní audia do cloudu' },
+      { status: 500 }
+    );
   }
 }

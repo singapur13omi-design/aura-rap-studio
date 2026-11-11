@@ -19,6 +19,9 @@ import {
   Zap,
   CreditCard,
   ChevronDown,
+  Cloud,
+  CloudOff,
+  RefreshCw,
 } from 'lucide-react';
 import { formatTime, formatBarsBeats } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
@@ -34,6 +37,8 @@ interface StudioHeaderProps {
   metronomeOn: boolean;
   masterPeakDb: number;
   isSaving: boolean;
+  cloudSyncStatus?: 'SYNCED' | 'SYNCING' | 'ERROR' | 'LOCAL';
+  onRetrySync?: () => void;
   onPlay: () => void;
   onPause: () => void;
   onStop: () => void;
@@ -61,6 +66,8 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
   metronomeOn,
   masterPeakDb,
   isSaving,
+  cloudSyncStatus = 'SYNCED',
+  onRetrySync,
   onPlay,
   onPause,
   onStop,
@@ -133,6 +140,29 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
           )}
           <span className="hidden sm:inline">{isSaving ? t.saving : t.saved}</span>
         </button>
+
+        {cloudSyncStatus === 'SYNCING' && (
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-cyan-950/40 text-[11px] text-cyan-400 border border-cyan-500/30">
+            <RefreshCw className="w-3 h-3 animate-spin text-cyan-400" />
+            <span className="hidden md:inline font-mono">Syncing...</span>
+          </div>
+        )}
+        {cloudSyncStatus === 'SYNCED' && (
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-950/40 text-[11px] text-emerald-400 border border-emerald-500/30" title="Audio nahrávky sú bezpečne uložené v cloude">
+            <Cloud className="w-3 h-3 text-emerald-400" />
+            <span className="hidden md:inline font-mono">Cloud Synced</span>
+          </div>
+        )}
+        {cloudSyncStatus === 'ERROR' && (
+          <button
+            onClick={onRetrySync}
+            title="Klikni pre opätovnú synchronizáciu do cloudu"
+            className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-950/40 hover:bg-amber-900/50 text-[11px] text-amber-300 border border-amber-500/40 transition"
+          >
+            <CloudOff className="w-3 h-3 text-amber-400" />
+            <span className="hidden md:inline font-mono">Sync Retry</span>
+          </button>
+        )}
       </div>
 
       {/* Center: Main Transport & Counter Controls */}

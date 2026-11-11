@@ -103,6 +103,9 @@ export interface AudioTrackItem {
   duration: number; // in seconds
   orderIndex: number;
   assetUrl?: string;
+  storageType?: string;
+  mimeType?: string;
+  audioChecksum?: string;
   waveformData?: number[]; // normalized peaks 0..1
   audioBuffer?: AudioBuffer; // live Web Audio buffer
   effects: TrackFXChain;

@@ -110,10 +110,27 @@ model AudioTrack {
   duration     Float         @default(0.0)
   orderIndex   Int           @default(0)
   assetUrl     String?       // reference to audio file
+  storageType  String?       @default("LOCAL") // 'VERCEL_BLOB' | 'POSTGRES_BYTEA' | 'LOCAL'
+  fileSize     Int?          // in bytes
+  mimeType     String?       // 'audio/wav', 'audio/webm', 'audio/mpeg'
+  audioChecksum String?      // SHA-256 hash for integrity verification
   waveformData String?       // JSON array of peaks for waveform preview
   effects      String?       // JSON of FX chain: { eq: {...}, comp: {...}, reverb: {...}, delay: {...}, autotune: {...} }
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  audioBlob    AudioTrackBlob?
+}
+
+model AudioTrackBlob {
+  id           String     @id @default(uuid())
+  trackId      String     @unique
+  track        AudioTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  mimeType     String     @default("audio/wav")
+  size         Int        @default(0)
+  data         Bytes
+  checksum     String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
 
 model Beat {
