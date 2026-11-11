@@ -228,3 +228,170 @@ export interface VideoProjectData {
   createdAt?: string;
   updatedAt?: string;
 }
+
+// ==========================================
+// AURA COLLAB TYPES
+// ==========================================
+
+export type CollabRole = 'OWNER' | 'FEATURE_ARTIST' | 'PRODUCER' | 'SOUND_ENGINEER' | 'SONGWRITER';
+export type CollabPermission = 'CAN_RECORD' | 'CAN_LISTEN_ONLY' | 'CO_PRODUCER';
+export type CollabStatus = 'ACTIVE' | 'COMPLETED' | 'ARCHIVED' | 'CANCELLED';
+export type CollabTrackStatus = 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'REVISION_REQUESTED';
+
+export interface CollabMemberItem {
+  id: string;
+  collabId: string;
+  userId: string;
+  user: {
+    id: string;
+    name?: string | null;
+    email: string;
+    image?: string | null;
+  };
+  role: CollabRole;
+  permissions: CollabPermission;
+  joinedAt: string;
+}
+
+export interface CollabInviteItem {
+  id: string;
+  collabId: string;
+  inviterId: string;
+  inviter?: {
+    id: string;
+    name?: string | null;
+    email: string;
+  };
+  collab?: {
+    id: string;
+    title: string;
+    project?: {
+      bpm: number;
+      keyScale: string;
+      genre: string;
+    };
+  };
+  inviteeEmail?: string | null;
+  inviteeUsername?: string | null;
+  token: string;
+  role: CollabRole;
+  permissions: CollabPermission;
+  message?: string | null;
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED';
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface CollabVersionItem {
+  id: string;
+  collabTrackId: string;
+  versionNumber: number;
+  assetUrl: string;
+  storageType: string;
+  sampleRate: number;
+  bitDepth: number;
+  channels: number;
+  duration: number;
+  timelineOffset: number;
+  fileSize: number;
+  audioChecksum: string;
+  waveform?: string | null;
+  notes?: string | null;
+  isFinal: boolean;
+  createdAt: string;
+  comments?: CollabCommentItem[];
+}
+
+export interface CollabTrackItem {
+  id: string;
+  collabId: string;
+  uploaderId: string;
+  uploader: {
+    id: string;
+    name?: string | null;
+    email: string;
+  };
+  trackName: string;
+  layerType: string;
+  timelineOffset: number;
+  status: CollabTrackStatus;
+  reviewNote?: string | null;
+  parentTrackId?: string | null;
+  createdAt: string;
+  versions: CollabVersionItem[];
+}
+
+export interface CollabCommentItem {
+  id: string;
+  collabId: string;
+  userId: string;
+  user: {
+    id: string;
+    name?: string | null;
+    email: string;
+  };
+  versionId?: string | null;
+  timestamp?: number | null;
+  message: string;
+  createdAt: string;
+}
+
+export interface CollabCreditSplitItem {
+  id: string;
+  collabId: string;
+  userId?: string | null;
+  artistName: string;
+  role: string;
+  splitPercentage: number;
+  confirmed: boolean;
+  confirmedAt?: string | null;
+  notes?: string | null;
+}
+
+export interface CollabNotificationItem {
+  id: string;
+  collabId: string;
+  recipientId: string;
+  senderId?: string | null;
+  sender?: {
+    id: string;
+    name?: string | null;
+    email: string;
+  } | null;
+  type: string;
+  title: string;
+  message: string;
+  read: boolean;
+  link?: string | null;
+  createdAt: string;
+}
+
+export interface CollaborationItem {
+  id: string;
+  projectId: string;
+  title: string;
+  ownerId: string;
+  owner: {
+    id: string;
+    name?: string | null;
+    email: string;
+  };
+  project: {
+    id: string;
+    title: string;
+    bpm: number;
+    keyScale: string;
+    genre: string;
+    duration: number;
+    tracks: any[];
+  };
+  status: CollabStatus;
+  terms?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  members: CollabMemberItem[];
+  invites: CollabInviteItem[];
+  tracks: CollabTrackItem[];
+  splits: CollabCreditSplitItem[];
+  comments: CollabCommentItem[];
+}

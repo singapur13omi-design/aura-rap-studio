@@ -31,21 +31,42 @@ export async function POST(req: Request) {
       );
     }
 
-    // Verify track and ownership if trackId is provided
+    // Verify track and ownership if trackId or projectId is provided
     let existingTrack = null;
     if (trackId) {
       existingTrack = await prisma.audioTrack.findUnique({
         where: { id: trackId },
         include: { project: true },
       });
+    }
 
-      if (existingTrack) {
-        if (existingTrack.project.userId && existingTrack.project.userId !== userId && !isOwner) {
+    if (!existingTrack && projectId) {
+      const project = await prisma.project.findUnique({
+        where: { id: projectId },
+      });
+      if (project) {
+        if (project.userId && project.userId !== userId && !isOwner) {
           return NextResponse.json(
             { success: false, error: 'PRÍSTUP ODMIETNUTÝ: Nemáte oprávnenie nahrávať do tohto projektu' },
             { status: 403 }
           );
         }
+        existingTrack = await prisma.audioTrack.create({
+          data: {
+            ...(trackId ? { id: trackId } : {}),
+            projectId,
+            name: file.name.replace(/\.[^/.]+$/, '') || 'Recorded Track',
+            layerType: 'MAIN_VOCAL',
+          },
+          include: { project: true },
+        });
+      }
+    } else if (existingTrack) {
+      if (existingTrack.project.userId && existingTrack.project.userId !== userId && !isOwner) {
+        return NextResponse.json(
+          { success: false, error: 'PRÍSTUP ODMIETNUTÝ: Nemáte oprávnenie nahrávať do tohto projektu' },
+          { status: 403 }
+        );
       }
     }
 

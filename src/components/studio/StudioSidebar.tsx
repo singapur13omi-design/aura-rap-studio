@@ -15,6 +15,7 @@ import {
   Compass,
   FileText,
   Clapperboard,
+  Users,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 
@@ -30,7 +31,8 @@ export type StudioTab =
   | 'NOTEPAD'
   | 'MY_VOICE'
   | 'EXPORT'
-  | 'VIDEO_STUDIO';
+  | 'VIDEO_STUDIO'
+  | 'COLLAB';
 
 interface StudioSidebarProps {
   currentTab: StudioTab;
@@ -58,6 +60,7 @@ export const StudioSidebar: React.FC<StudioSidebarProps> = ({
     { id: 'MY_VOICE' as StudioTab, label: t.navMyVoice, icon: UserCheck },
     { id: 'EXPORT' as StudioTab, label: t.navExport, icon: Download },
     { id: 'VIDEO_STUDIO' as StudioTab, label: t.navVideoStudio, icon: Clapperboard, badge: 'PRO' },
+    { id: 'COLLAB' as StudioTab, label: 'AURA COLLAB', icon: Users, badge: 'FEATURE' },
   ];
 
   return (

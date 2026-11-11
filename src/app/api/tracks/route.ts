@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     const isOwner = (session?.user as any)?.role === 'OWNER' || isOwnerEmail(session?.user?.email);
 
     const body = await req.json();
-    const { projectId, name, layerType, color, volume, pan, orderIndex, assetUrl, effects } = body;
+    const { id, projectId, name, layerType, color, volume, pan, orderIndex, assetUrl, effects } = body;
 
     if (!projectId) {
       return NextResponse.json({ success: false, error: 'Chýba projectId' }, { status: 400 });
@@ -35,6 +35,7 @@ export async function POST(req: Request) {
 
     const track = await prisma.audioTrack.create({
       data: {
+        ...(id ? { id } : {}),
         projectId,
         name: name || 'New Track',
         layerType: layerType || 'MAIN_VOCAL',

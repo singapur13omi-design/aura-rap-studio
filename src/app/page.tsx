@@ -17,6 +17,7 @@ import { BeatLibrary } from '@/components/studio/BeatLibrary';
 import { RapNotepad } from '@/components/studio/RapNotepad';
 import { VideoStudioLockedPresentation } from '@/components/video/VideoStudioLockedPresentation';
 import { AuraVideoStudioWorkspace } from '@/components/video/AuraVideoStudioWorkspace';
+import { CollabDashboard } from '@/components/collab/CollabDashboard';
 import { VoiceProfileSection } from '@/components/studio/VoiceProfileSection';
 import { AiMusicAssistant } from '@/components/studio/AiMusicAssistant';
 import { DashboardView } from '@/components/studio/DashboardView';
@@ -86,6 +87,11 @@ function AuraRapStudioContent() {
       }
 
       if (urlParams.get('studio') === 'true') {
+        setViewMode('STUDIO');
+      }
+
+      if (urlParams.get('tab') === 'COLLAB') {
+        setCurrentTab('COLLAB');
         setViewMode('STUDIO');
       }
 
@@ -968,6 +974,16 @@ function AuraRapStudioContent() {
               onOpenPricing={() => setPricingModalOpen(true)}
             />
           )
+        )}
+
+        {currentTab === 'COLLAB' && (
+          <CollabDashboard
+            currentUserId={(session?.user as any)?.id}
+            projects={projects}
+            onOpenProject={(projId) => {
+              handleOpenProject(projId);
+            }}
+          />
         )}
       </div>
 

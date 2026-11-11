@@ -35,6 +35,14 @@ model User {
   videoProjects          VideoProject[]
   videoJobs              VideoGenerationJob[]
   videoCreditTxs         VideoCreditTransaction[]
+  ownedCollabs           Collaboration[]             @relation("CollaborationOwner")
+  collabMemberships      CollaborationMember[]
+  collabInvitesSent      CollaborationInvite[]       @relation("CollaborationInvitesSent")
+  collabTracksUploaded   CollaborationTrack[]
+  collabComments         CollaborationComment[]
+  collabSplits           CollaborationCreditSplit[]
+  collabNotificationsRec CollaborationNotification[] @relation("NotificationRecipient")
+  collabNotificationsSnt CollaborationNotification[] @relation("NotificationSender")
 }
 
 model Account {
@@ -93,6 +101,7 @@ model Project {
   analyses        AIAnalysis[]
   exportJobs      ExportJob[]
   processingJobs  ProcessingJob[]
+  collaboration   Collaboration?
 }
 
 model AudioTrack {
@@ -378,5 +387,147 @@ model VideoExport {
   status          String        @default("COMPLETED")
   createdAt       DateTime      @default(now())
 }
+
+// ==========================================
+// AURA COLLAB MODELS
+// ==========================================
+
+model Collaboration {
+  id              String                  @id @default(uuid())
+  projectId       String                  @unique
+  project         Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title           String                  // Song Title
+  ownerId         String                  // User ID of project owner
+  owner           User                    @relation("CollaborationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  status          String                  @default("ACTIVE") // ACTIVE, COMPLETED, ARCHIVED, CANCELLED
+  terms           String?                 @db.Text // Agreed notes & production terms
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  members         CollaborationMember[]
+  invites         CollaborationInvite[]
+  tracks          CollaborationTrack[]
+  comments        CollaborationComment[]
+  splits          CollaborationCreditSplit[]
+  notifications   CollaborationNotification[]
+}
+
+model CollaborationMember {
+  id              String        @id @default(uuid())
+  collabId        String
+  collab          Collaboration @relation(fields: [collabId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role            String        @default("FEATURE_ARTIST") // OWNER, FEATURE_ARTIST, PRODUCER, SOUND_ENGINEER, SONGWRITER
+  permissions     String        @default("CAN_RECORD") // CAN_RECORD, CAN_LISTEN_ONLY, CO_PRODUCER
+  joinedAt        DateTime      @default(now())
+
+  @@unique([collabId, userId])
+}
+
+model CollaborationInvite {
+  id              String        @id @default(uuid())
+  collabId        String
+  collab          Collaboration @relation(fields: [collabId], references: [id], onDelete: Cascade)
+  inviterId       String
+  inviter         User          @relation("CollaborationInvitesSent", fields: [inviterId], references: [id], onDelete: Cascade)
+  inviteeEmail    String?
+  inviteeUsername String?
+  token           String        @unique // Secure cryptographic invite token
+  role            String        @default("FEATURE_ARTIST")
+  permissions     String        @default("CAN_RECORD") // CAN_RECORD, CAN_LISTEN_ONLY, CO_PRODUCER
+  message         String?       @db.Text
+  status          String        @default("PENDING") // PENDING, ACCEPTED, DECLINED, EXPIRED
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model CollaborationTrack {
+  id              String                 @id @default(uuid())
+  collabId        String
+  collab          Collaboration          @relation(fields: [collabId], references: [id], onDelete: Cascade)
+  uploaderId      String
+  uploader        User                   @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  trackName       String                 // e.g. "Guest Verse 1", "Chorus Lead"
+  layerType       String                 @default("FEATURE_VOCAL")
+  timelineOffset  Float                  @default(0.0) // Precise second offset in project timeline
+  status          String                 @default("SUBMITTED") // SUBMITTED, APPROVED, REJECTED, REVISION_REQUESTED
+  reviewNote      String?                @db.Text
+  parentTrackId   String?                // Linked AudioTrack ID in master Project once approved
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  versions        CollaborationVersion[]
+}
+
+model CollaborationVersion {
+  id              String             @id @default(uuid())
+  collabTrackId   String
+  collabTrack     CollaborationTrack @relation(fields: [collabTrackId], references: [id], onDelete: Cascade)
+  versionNumber   Int                @default(1)
+  assetUrl        String             // /api/audio/track/[id] or secure stream
+  storageType     String             @default("POSTGRES_BYTEA") // POSTGRES_BYTEA | VERCEL_BLOB
+  sampleRate      Int                @default(44100)
+  bitDepth        Int                @default(16)
+  channels        Int                @default(1) // 1 = mono vocal, 2 = stereo
+  duration        Float              @default(0.0)
+  timelineOffset  Float              @default(0.0)
+  fileSize        Int                @default(0)
+  audioChecksum   String             // SHA-256 integrity hash
+  waveform        String?            @db.Text // JSON peaks
+  notes           String?            @db.Text
+  isFinal         Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+
+  comments        CollaborationComment[]
+}
+
+model CollaborationComment {
+  id              String                @id @default(uuid())
+  collabId        String
+  collab          Collaboration         @relation(fields: [collabId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  versionId       String?
+  version         CollaborationVersion? @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  timestamp       Float?                // Timeline marker in seconds
+  message         String                @db.Text
+  createdAt       DateTime              @default(now())
+}
+
+model CollaborationCreditSplit {
+  id              String        @id @default(uuid())
+  collabId        String
+  collab          Collaboration @relation(fields: [collabId], references: [id], onDelete: Cascade)
+  userId          String?
+  user            User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  artistName      String        // Stage name / Legal name
+  role            String        // MAIN_ARTIST, FEATURED_ARTIST, PRODUCER, SONGWRITER, COMPOSER
+  splitPercentage Float         // e.g. 50.0%
+  confirmed       Boolean       @default(false)
+  confirmedAt     DateTime?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model CollaborationNotification {
+  id              String        @id @default(uuid())
+  collabId        String
+  collab          Collaboration @relation(fields: [collabId], references: [id], onDelete: Cascade)
+  recipientId     String
+  recipient       User          @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  senderId        String?
+  sender          User?         @relation("NotificationSender", fields: [senderId], references: [id], onDelete: SetNull)
+  type            String        // INVITE_RECEIVED, INVITE_ACCEPTED, TRACK_SUBMITTED, TRACK_APPROVED, REVISION_REQUESTED, COMMENT_ADDED
+  title           String
+  message         String        @db.Text
+  read            Boolean       @default(false)
+  link            String?       // Route link to collab or guest studio
+  createdAt       DateTime      @default(now())
+}
+
 
 
